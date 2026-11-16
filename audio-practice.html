@@ -537,10 +537,23 @@
   const ONES = { zero: 0, oh: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
     ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19 };
   const TENS = { twenty: 20, thirty: 30, forty: 40, fourty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
-  const SOUND_ALIKE = { to: 2, too: 2, for: 4, fore: 4, ate: 8, won: 1, tree: 3, free: 3, sicks: 6, tin: 10, nein: 9 };
+  const SOUND_ALIKE = { to: 2, too: 2, for: 4, fore: 4 };   // only used when nothing else sounds like a number
+  // Words the browser often hears instead of a number (especially with kids' voices). These are always swapped,
+  // so "sex" counts as 6 and the screen shows "six".
+  const MISHEARD = {
+    sex: 'six', sax: 'six', sacks: 'six', sacs: 'six', sics: 'six', sicks: 'six', sick: 'six', seeks: 'six', secs: 'six',
+    sexes: 'six', sez: 'six', sexteen: 'sixteen', sexty: 'sixty', sexy: 'sixty',
+    fife: 'five', tree: 'three', free: 'three', ate: 'eight', won: 'one', nein: 'nine', tin: 'ten', twelf: 'twelve',
+  };
+  function normalizeHeard(text) {
+    let s = String(text || '').toLowerCase()
+      .replace(/\bs\*+/g, 'six')                    // some browsers star out the misheard word ("s**")
+      .replace(/(\d),(\d)/g, '$1$2').replace(/[^a-z0-9 ]+/g, ' ')
+      .replace(/\b(sex|six)\s+teen\b/g, 'sixteen').replace(/\b(sex|six)\s+t(ea|ee)?\b/g, 'sixty');
+    return s.split(/\s+/).filter(Boolean).map(w => MISHEARD[w] || w).join(' ');
+  }
   function parseSpoken(text) {
-    if (!text) return null;
-    const s = text.toLowerCase().replace(/(\d),(\d)/g, '$1$2').replace(/[^a-z0-9 ]+/g, ' ').trim();
+    const s = normalizeHeard(text);
     if (!s) return null;
     const runs = s.match(/\d+/g);
     if (runs) return parseInt(runs[runs.length - 1], 10);   // the last number said wins ("15… no, 16")
@@ -592,7 +605,8 @@
       return;
     }
     if (state !== 'asking') return;
-    if (top) setStatus('heard', top);
+    const shown = normalizeHeard(top);
+    if (shown) setStatus('heard', shown);
     const decide = () => {
       if (state !== 'asking') return;
       let n = parseSpoken(top);
