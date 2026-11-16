@@ -197,7 +197,7 @@
   <!-- Start -->
   <section class="screen" id="start">
     <div class="hello">Hi, <span id="kidName"></span>!</div>
-    <p class="lead">Listen to each problem, then <b>say</b> or <b>type</b> the answer.<br>Press <b>Stop</b> when you're done.</p>
+    <p class="lead">Listen to each problem. After the <b>beep</b>, say the answer — or type it.<br>Press <b>Stop</b> when you're done.</p>
     <div class="toggles">
       <label class="toggle"><input type="checkbox" id="optTalk" checked> 🔊 Read the problems out loud</label>
       <label class="toggle" id="voiceToggle"><input type="checkbox" id="optVoice" checked> 🎤 Answer with my voice</label>
@@ -406,6 +406,7 @@
   }
   const soundGood = () => { tone(784, 0, 0.22, 'sine', 0.16); tone(988, 0.08, 0.22, 'sine', 0.16); tone(1319, 0.16, 0.32, 'sine', 0.16); };
   const soundBad  = () => { tone(330, 0, 0.16, 'triangle', 0.22); tone(247, 0.17, 0.28, 'triangle', 0.22); };
+  const soundReady = () => tone(1175, 0, 0.12, 'sine', 0.09);   // "your turn" blip when the mic opens
 
   // ---------- Talking (text to speech) ----------
   const canSpeak = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
@@ -450,6 +451,11 @@
   const isTouch = isIOS || /Android/i.test(navigator.userAgent);
   const singleShot = isTouch;
   let voiceOn = true, rec = null, recWanted = false, recBusy = false, recEnds = [], startedByTap = false, settle = null;
+  let watchdog = null, cueNext = false;
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  // Make the browser finish up and hand over what it heard (some browsers wait a long time, iPhone may never finish)
+  function finishListening() { if (rec && recBusy) { try { rec.stop(); } catch (e) {} } }
+  function armWatchdog(ms) { clearTimeout(watchdog); watchdog = setTimeout(() => { if (recWanted) finishListening(); }, ms); }
   function getRec() {
     if (rec || !SR) return rec;
     rec = new SR();
@@ -457,6 +463,8 @@
     rec.onstart = () => {
       if (!recWanted) return;
       setMic(true);
+      if (cueNext && !isAndroid) soundReady();       // Android plays its own beep
+      cueNext = false;
       setStatus(state === 'lesson' ? 'lesson' : state === 'asking' ? 'listening' : null);
     };
     rec.onresult = e => {
@@ -465,7 +473,9 @@
         for (let j = 0; j < r.length; j++) alts.push(r[j].transcript);
         onHeard(alts, r.isFinal);
       }
+      if (recWanted) armWatchdog(1800);              // if nothing new comes in, wrap up what was heard
     };
+    rec.onspeechend = () => { if (singleShot && recWanted) finishListening(); };
     rec.onerror = e => {
       // On a phone, an automatic start can be refused until the mic is tapped once; that's not a real block
       if ((e.error === 'not-allowed' || e.error === 'service-not-allowed') && singleShot && !startedByTap) {
@@ -479,6 +489,7 @@
     };
     rec.onend = () => {
       recBusy = false;
+      clearTimeout(watchdog);
       setMic(false);
       if (singleShot) {                              // phones: wait for a tap on the mic for the next try
         if (recWanted && voiceOn) { recWanted = false; setStatus(state === 'lesson' ? 'lesson' : state === 'asking' ? 'tap' : null); }
@@ -498,11 +509,13 @@
     if (!voiceOn || !canListen) return;
     startedByTap = !!byTap;
     recWanted = true;
+    cueNext = true;
     if (!recBusy) startRec();
   }
   function pauseListening() {                        // stop listening while the page talks, so it doesn't hear itself
     recWanted = false;
     clearTimeout(settle);
+    clearTimeout(watchdog);
     setMic(false);
     if (rec && recBusy) { try { rec.abort(); } catch (e) {} }
   }
@@ -510,7 +523,7 @@
     const b = $('btnMic');
     b.hidden = !(voiceOn && canListen) || state === 'done' || state === 'idle';
     b.classList.toggle('on', on);
-    b.innerHTML = on ? '<span class="dot"></span>Listening…' : '🎤 Tap to talk';
+    b.innerHTML = on ? '<span class="dot"></span>Listening… tap when done' : '🎤 Tap to talk';
   }
   function voiceTrouble(msg) {
     voiceOn = false; recWanted = false;
@@ -532,7 +545,6 @@
     const runs = s.match(/\d+/g);
     if (runs) return parseInt(runs[runs.length - 1], 10);   // the last number said wins ("15… no, 16")
     const words = s.split(/\s+/);
-    if (words.length === 1 && words[0] in SOUND_ALIKE) return SOUND_ALIKE[words[0]];
     let last = null, val = null;
     const end = () => { if (val !== null) last = val; val = null; };
     for (let i = 0; i < words.length; i++) {
@@ -555,6 +567,10 @@
       }
     }
     end();
+    if (last === null) {                             // "it's to" → 2, "um for" → 4
+      const lw = words[words.length - 1];
+      if (lw in SOUND_ALIKE) return SOUND_ALIKE[lw];
+    }
     return last;
   }
   // "fifteen" and "fifty" sound alike; give the benefit of the doubt only if the browser also heard the right one
@@ -591,7 +607,10 @@
       submit(n);
     };
     if (isFinal) decide();
-    else if (parseSpoken(top) !== null) settle = setTimeout(decide, 1200);
+    else {
+      const n0 = parseSpoken(top);
+      if (n0 !== null) settle = setTimeout(decide, n0 === cur.ans ? 700 : 1000);
+    }
   }
 
   // ---------- Mini-lesson for a missed problem ----------
@@ -650,8 +669,9 @@
   function setStatus(mode, heard) {
     const el = $('status');
     if (mode === 'heard') { el.textContent = 'I heard: “' + heard + '”'; return; }
-    if (mode === 'listening') { el.innerHTML = '<span class="dot"></span>Listening… say the answer or type it'; return; }
+    if (mode === 'listening') { el.innerHTML = '<span class="dot"></span>Your turn! Say the answer' + (isTouch ? ' (or tap the numbers)' : ' (or type it)'); return; }
     if (mode === 'speaking') { el.textContent = '🔊 Listen…'; return; }
+    if (mode === 'starting') { el.textContent = '🎤 Get ready…'; return; }
     if (mode === 'type') { el.textContent = isTouch ? 'Tap the numbers, then ✓' : 'Type the answer, then press ✓ (or Enter)'; return; }
     if (mode === 'tap') { el.textContent = 'Tap 🎤 and say the answer, or tap the numbers'; return; }
     if (mode === 'lesson') {
@@ -707,7 +727,7 @@
       if (state !== 'asking') return;
       if (readyAt === null) readyAt = performance.now();
       if (voiceOn) listen();
-      setStatus(voiceOn ? 'listening' : 'type');
+      setStatus(voiceOn ? 'starting' : 'type');
     }, 0);
   }
 
@@ -719,7 +739,7 @@
         if (state !== 'asking') return;
         if (readyAt === null) readyAt = performance.now();
         if (voiceOn) listen();
-        setStatus(voiceOn ? 'listening' : 'type');
+        setStatus(voiceOn ? 'starting' : 'type');
       }, 0);
     } else if (state === 'lesson') {
       pauseListening();
@@ -855,7 +875,8 @@
   $('btnMic').onclick = () => {
     if (state !== 'asking' && state !== 'lesson') return;
     ensureAudio();
-    if (state === 'asking') setStatus('listening');
+    if (recBusy && recWanted) { finishListening(); return; }   // "tap when done": check what was heard now
+    if (state === 'asking') setStatus('starting');
     listen(true);
   };
   function press(k) {
