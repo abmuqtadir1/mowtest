@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multiplication Practice</title>
+<script src="themes.js"></script>
 <style>
   :root {
     --ink: #1f2a37;
@@ -50,7 +51,7 @@
 
   /* Header */
   .title-row { display: flex; align-items: center; justify-content: space-between; gap: 0.2in; }
-  h1 { font-size: 21pt; font-weight: 700; letter-spacing: .2px; display: flex; align-items: center; gap: 0.12in; }
+  h1 { font-size: 21pt; font-weight: 700; letter-spacing: .2px; display: flex; align-items: center; gap: 0.12in; white-space: nowrap; }
   h1 small { font-size: 14pt; font-weight: 600; color: var(--muted); }
   .star { width: 0.3in; height: 0.3in; flex: none; }
   .key-tag {
@@ -58,7 +59,7 @@
     padding: 3px 9px; border-radius: 20px; letter-spacing: .5px; text-transform: uppercase;
   }
   body.answers .key-tag { display: inline-block; }
-  .tables { display: flex; align-items: center; gap: 6px; font-size: 11pt; color: var(--muted); font-weight: 600; }
+  .tables { display: flex; align-items: center; gap: 6px; font-size: 11pt; color: var(--muted); font-weight: 600; white-space: nowrap; }
   .chip {
     min-width: 0.3in; height: 0.3in; padding: 0 6px; border-radius: 0.15in;
     display: inline-flex; align-items: center; justify-content: center;
@@ -81,7 +82,7 @@
 
   .prob {
     display: grid;
-    grid-template-columns: 1.2em 0.85em 1.2em 0.85em 1fr;
+    grid-template-columns: var(--c1, 1.2em) 0.85em var(--c3, 1.2em) 0.85em 1fr;
     align-items: center;
     padding: 0 0.08in 0 0.02in;
     font-weight: 600;
@@ -125,11 +126,10 @@
 <script>
 (function () {
   // ================= Settings — change these any time =================
-  const PAPER = 'legal';                // 'legal' (8.5 × 14 in) or 'letter' (8.5 × 11 in)
-  const SIDES = 2;                      // 2 = front and back (print two-sided), 1 = single page
-  // Name at the top of the front page. It's set on the worksheet list page and saved only on this device.
-  let KID_NAME = 'Superstar';
-  try { KID_NAME = (localStorage.getItem('worksheetKidName') || '').trim().slice(0, 20) || KID_NAME; } catch (e) {}
+  const TITLE = 'Multiplication Practice'; // title at the top of each page
+  const OPS = 'mul';                    // 'mul' = ×,  'div' = ÷,  'mix' = about half of each
+  const TABLES_LABEL = 'Tables:';          // label in front of the colored number badges
+  const DEFAULT_TABLES = [2, 3, 5, 10];  // times-tables to practice
   const CHEERS = [                      // one is picked for each new sheet (shown after the name)
     "you're one smart cookie — these problems don't stand a chance!",
     "your brain is a math machine — let's make it zoom!",
@@ -152,8 +152,15 @@
     "high five, smarty — this page is yours to conquer!",
     "you shine brighter than a gold star — show 'em what you've got!",
   ];
-  const DEFAULT_TABLES = [2, 3, 5, 10]; // times-tables to practice
-  const MIN = 2, MAX = 12;              // each table runs 2×2 … 2×12, 3×2 … 3×12, etc.
+  const THEME = (window.WorksheetThemes && window.WorksheetThemes.active()) || {};
+  const TP = THEME.print || {};
+  const CHEER_LIST = TP.cheers || CHEERS;
+  // Name at the top of the front page. It's set on the worksheet list page and saved only on this device.
+  let KID_NAME = 'Superstar';
+  try { KID_NAME = (localStorage.getItem('worksheetKidName') || '').trim().slice(0, 20) || KID_NAME; } catch (e) {}
+  const PAPER = 'legal';                // 'legal' (8.5 × 14 in) or 'letter' (8.5 × 11 in)
+  const SIDES = 2;                      // 2 = front and back (print two-sided), 1 = single page
+  const MIN = 2, MAX = 12;              // each table runs 2 … 12 (e.g. 3×2 … 3×12)
   const COLS = 6;                       // problems per row
   const ROWS = PAPER === 'legal' ? 20 : 16;   // rows per side (legal: 6 × 20 = 120 per side)
   const GROUP = 4;                      // rows per block (a small gap separates blocks)
@@ -200,53 +207,85 @@
     }
     return arr;
   };
-  const fact = p => Math.min(p[0], p[1]) + 'x' + Math.max(p[0], p[1]);
 
   // ---- Make the problems ----
-  // Deal from a shuffled "deck" of every fact so each one shows up evenly,
-  // and avoid repeating a fact right next to or right above itself.
+  // A "card" is a fact [table, n] plus an operation:
+  //   × : table × n  (shown either way round, e.g. 3 × 7 or 7 × 3)
+  //   ÷ : (table × n) ÷ table = n   (e.g. 21 ÷ 3)
+  // Cards are dealt from a shuffled deck so every fact (and, on mixed sheets,
+  // every × and ÷) shows up evenly. The same fact family never sits right
+  // next to or right above itself, so one problem can't give away the next.
+  const family = c => { const [t, n] = c.f; return Math.min(t, n) + 'x' + Math.max(t, n); };
+  const makeDeck = () => {
+    const d = [];
+    for (const t of tables) for (let n = MIN; n <= MAX; n++) {
+      if (OPS !== 'div') d.push({ f: [t, n], op: 'mul' });
+      if (OPS !== 'mul') d.push({ f: [t, n], op: 'div' });
+    }
+    return shuffle(d);
+  };
+
   const perSide = COLS * ROWS;
   const total = perSide * SIDES;
   const problems = [];
+  const fams = [];
   let deck = [];
   while (problems.length < total) {
-    if (!deck.length) {
-      for (const t of tables) for (let n = MIN; n <= MAX; n++) deck.push([t, n]);
-      shuffle(deck);
-    }
+    if (!deck.length) deck = makeDeck();
     const k = problems.length;
-    const left = k % COLS ? problems[k - 1] : null;
-    const above = k >= COLS ? problems[k - COLS] : null;
-    let i = deck.findIndex(c => (!left || fact(c) !== fact(left)) && (!above || fact(c) !== fact(above)));
-    if (i < 0) i = 0;
-    const [t, n] = deck.splice(i, 1)[0];
-    problems.push(rand() < 0.5 ? [t, n] : [n, t]); // mix 3 × 7 and 7 × 3
+    const left = k % COLS ? fams[k - 1] : null;
+    const above = k >= COLS ? fams[k - COLS] : null;
+    const ok = c => family(c) !== left && family(c) !== above;
+    let i = deck.findIndex(ok);
+    if (i < 0) { deck = deck.concat(makeDeck()); i = deck.findIndex(ok); if (i < 0) i = 0; }
+    const c = deck.splice(i, 1)[0];
+    const [t, n] = c.f;
+    if (c.op === 'mul') {
+      const swap = rand() < 0.5;
+      problems.push({ a: swap ? n : t, sym: '×', b: swap ? t : n, ans: t * n });
+    } else {
+      problems.push({ a: t * n, sym: '÷', b: t, ans: n });
+    }
+    fams.push(family(c));
   }
 
   // ---- Pick this sheet's cheer (never the same as the last sheet) ----
-  let cheerIdx = Math.floor(rand() * CHEERS.length);
+  const storeKey = 'worksheetLastCheer-' + OPS;
+  let cheerIdx = Math.floor(rand() * CHEER_LIST.length);
   try {
-    const last = parseInt(localStorage.getItem('worksheetLastCheer'), 10);
-    if (!params.get('sheet') && CHEERS.length > 1 && cheerIdx === last) cheerIdx = (cheerIdx + 1) % CHEERS.length;
-    localStorage.setItem('worksheetLastCheer', String(cheerIdx));
+    const last = parseInt(localStorage.getItem(storeKey), 10);
+    if (!params.get('sheet') && CHEER_LIST.length > 1 && cheerIdx === last) cheerIdx = (cheerIdx + 1) % CHEER_LIST.length;
+    localStorage.setItem(storeKey, String(cheerIdx));
   } catch (e) { /* storage unavailable — repeats just become possible */ }
-  const CHEER = CHEERS[cheerIdx];
+  const CHEER = CHEER_LIST[cheerIdx];
+
+  // ---- Sizing: room for 3-digit numbers (like 120 ÷ 10) while keeping a good answer box ----
+  const digits = key => Math.max(...problems.map(p => String(p[key]).length));
+  const slot = d => +(d * 0.58 + 0.04).toFixed(2);           // 2 digits → 1.2em, 3 digits → 1.78em
+  const c1 = slot(digits('a')), c3 = slot(digits('b'));
+  const exprEm = c1 + 0.85 + c3 + 0.85;
+  const cellIn = 7.84 / COLS;
+  const roomPt = (cellIn - 0.12 - 0.37) * 72;                 // leave at least ~0.37in for the answer box
+  let fontPt = COLS <= 6 ? 13 : COLS === 7 ? 11.5 : 10;
+  fontPt = Math.min(fontPt, Math.floor(roomPt / exprEm * 2) / 2);
 
   // ---- Build the pages ----
   const colors = ['#3b7be0', '#1f9d55', '#ee8a0f', '#8b5cf6', '#e0457b', '#0e9aa7'];
-  const chips = 'Tables:' + tables.map((t, i) =>
+  const chips = TABLES_LABEL + tables.map((t, i) =>
     `<span class="chip" style="background:${colors[i % colors.length]}">${t}</span>`).join('');
-  const star = '<svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path fill="#f5b301" stroke="#d99a00" stroke-width="1" stroke-linejoin="round" d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg>';
-  const fontPt = COLS <= 6 ? 13 : COLS === 7 ? 11.5 : 10;
+  const classicStar = '<svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path fill="#f5b301" stroke="#d99a00" stroke-width="1" stroke-linejoin="round" d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg>';
+
+  const catArt = THEME.art && THEME.art.sit;
+  const star = catArt ? '' : THEME.icon ? THEME.icon.replace('<svg ', '<svg class="star" ') : classicStar;
+  const miniStar = THEME.iconSmall || classicStar.replace('class="star"', 'class="mini-star"');
 
   let out = '';
   for (let s = 0; s < SIDES; s++) {
     const first = s === 0, last = s === SIDES - 1;
-    const title = first
-      ? 'Multiplication Practice'
-      : `Multiplication Practice <small>Side ${s + 1} · keep going!</small>`;
+    const title = first ? TITLE : `${TITLE} <small>${TP.side2 || `Side ${s + 1} · keep going!`}</small>`;
 
-    let html = `<div class="page"><div class="sheet"><header>
+    let html = `<div class="page"><div class="sheet">` +
+      (catArt ? `<header class="with-cat"><div class="hdr-cat${first ? '' : ' small'}">${catArt}</div><div class="hdr-main">` : '<header>') + `
       <div class="title-row">
         <h1>${star}${title}<span class="key-tag">Answer key</span></h1>
         <div class="tables">${chips}</div>
@@ -255,18 +294,18 @@
       const kid = [...KID_NAME].map((ch, i) =>
         `<span style="color:${colors[i % colors.length]}">${ch.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))}</span>`).join('');
       html += `<div class="cheer"><span class="kid">${kid}</span>,` +
-        `<span class="msg">${CHEER}</span>${star.replace('class="star"', 'class="mini-star"')}</div>`;
+        `<span class="msg">${CHEER}</span>${miniStar}</div>`;
     }
-    html += '</header><main class="grid">';
+    html += (catArt ? '</div>' : '') + `</header><main class="grid" style="--c1:${c1}em;--c3:${c3}em">`;
 
     for (let r = 0; r < ROWS; r++) {
       if (r % GROUP === 0) html += (r ? '</div>' : '') + '<div class="block">';
       html += `<div class="row" style="grid-template-columns:repeat(${COLS},1fr)">`;
       for (let c = 0; c < COLS; c++) {
-        const [a, b] = problems[s * perSide + r * COLS + c];
+        const p = problems[s * perSide + r * COLS + c];
         html += `<div class="prob" style="font-size:${fontPt}pt">` +
-          `<span class="n">${a}</span><span class="op">×</span><span class="n">${b}</span>` +
-          `<span class="op">=</span><span class="ans"><span>${a * b}</span></span></div>`;
+          `<span class="n">${p.a}</span><span class="op">${p.sym}</span><span class="n">${p.b}</span>` +
+          `<span class="op">=</span><span class="ans"><span>${p.ans}</span></span></div>`;
       }
       html += '</div>';
     }
@@ -274,12 +313,18 @@
 
     const sideLabel = SIDES > 1 ? ` · Side ${s + 1} of ${SIDES}` : '';
     html += `<div class="foot"><span>Sheet #${seed}${sideLabel}</span>` +
-      (last ? '<span>Check your work when you finish!</span>'
-            : '<span class="turn">Turn the page over &rarr;</span>') +
+      (last ? `<span>${TP.finish || 'Check your work when you finish!'}${TP.footPaws ? `<span class="paws">${TP.footPaws}</span>` : ''}</span>`
+            : `<span class="turn">${TP.turn || 'Turn the page over &rarr;'}</span>`) +
       '</div></div></div>';
     out += html;
   }
   document.getElementById('pages').innerHTML = out;
+
+  // Keep each title on one line: shrink it a little if it would run into the number badges
+  document.querySelectorAll('.title-row').forEach(row => {
+    const h = row.querySelector('h1'); let size = 21;
+    while (row.scrollWidth > row.clientWidth + 1 && size > 14) { size -= 0.5; h.style.fontSize = size + 'pt'; }
+  });
 
   // Keep the cheer on one line: shrink it a little if a long one would overflow
   document.querySelectorAll('.cheer').forEach(el => {
@@ -287,7 +332,7 @@
     while (el.scrollWidth > el.clientWidth + 1 && size > 10) { size -= 0.5; el.style.fontSize = size + 'pt'; }
   });
 
-  document.title = 'Multiplication Practice – ' + tables.join(', ') + ' (Sheet #' + seed + ')';
+  document.title = TITLE + ' – ' + tables.join(', ') + ' (Sheet #' + seed + ')';
   const paperName = PAPER === 'legal' ? 'Legal' : 'Letter';
   document.getElementById('tip').textContent = SIDES > 1
     ? `Printing: Paper size “${paperName}”, “Print on both sides” on (flip on long edge), Margins “Default”, “Headers and footers” off.`

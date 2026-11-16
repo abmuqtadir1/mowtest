@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Division Practice</title>
+<script src="themes.js"></script>
 <style>
   :root {
     --ink: #1f2a37;
@@ -152,6 +153,9 @@
     "you shine brighter than a gold star — show 'em what you've got!",
     "you can split up numbers like a pro — let's divide!",
   ];
+  const THEME = (window.WorksheetThemes && window.WorksheetThemes.active()) || {};
+  const TP = THEME.print || {};
+  const CHEER_LIST = TP.cheers || CHEERS;
   // Name at the top of the front page. It's set on the worksheet list page and saved only on this device.
   let KID_NAME = 'Superstar';
   try { KID_NAME = (localStorage.getItem('worksheetKidName') || '').trim().slice(0, 20) || KID_NAME; } catch (e) {}
@@ -248,13 +252,13 @@
 
   // ---- Pick this sheet's cheer (never the same as the last sheet) ----
   const storeKey = 'worksheetLastCheer-' + OPS;
-  let cheerIdx = Math.floor(rand() * CHEERS.length);
+  let cheerIdx = Math.floor(rand() * CHEER_LIST.length);
   try {
     const last = parseInt(localStorage.getItem(storeKey), 10);
-    if (!params.get('sheet') && CHEERS.length > 1 && cheerIdx === last) cheerIdx = (cheerIdx + 1) % CHEERS.length;
+    if (!params.get('sheet') && CHEER_LIST.length > 1 && cheerIdx === last) cheerIdx = (cheerIdx + 1) % CHEER_LIST.length;
     localStorage.setItem(storeKey, String(cheerIdx));
   } catch (e) { /* storage unavailable — repeats just become possible */ }
-  const CHEER = CHEERS[cheerIdx];
+  const CHEER = CHEER_LIST[cheerIdx];
 
   // ---- Sizing: room for 3-digit numbers (like 120 ÷ 10) while keeping a good answer box ----
   const digits = key => Math.max(...problems.map(p => String(p[key]).length));
@@ -270,14 +274,19 @@
   const colors = ['#3b7be0', '#1f9d55', '#ee8a0f', '#8b5cf6', '#e0457b', '#0e9aa7'];
   const chips = TABLES_LABEL + tables.map((t, i) =>
     `<span class="chip" style="background:${colors[i % colors.length]}">${t}</span>`).join('');
-  const star = '<svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path fill="#f5b301" stroke="#d99a00" stroke-width="1" stroke-linejoin="round" d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg>';
+  const classicStar = '<svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path fill="#f5b301" stroke="#d99a00" stroke-width="1" stroke-linejoin="round" d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg>';
+
+  const catArt = THEME.art && THEME.art.sit;
+  const star = catArt ? '' : THEME.icon ? THEME.icon.replace('<svg ', '<svg class="star" ') : classicStar;
+  const miniStar = THEME.iconSmall || classicStar.replace('class="star"', 'class="mini-star"');
 
   let out = '';
   for (let s = 0; s < SIDES; s++) {
     const first = s === 0, last = s === SIDES - 1;
-    const title = first ? TITLE : `${TITLE} <small>Side ${s + 1} · keep going!</small>`;
+    const title = first ? TITLE : `${TITLE} <small>${TP.side2 || `Side ${s + 1} · keep going!`}</small>`;
 
-    let html = `<div class="page"><div class="sheet"><header>
+    let html = `<div class="page"><div class="sheet">` +
+      (catArt ? `<header class="with-cat"><div class="hdr-cat${first ? '' : ' small'}">${catArt}</div><div class="hdr-main">` : '<header>') + `
       <div class="title-row">
         <h1>${star}${title}<span class="key-tag">Answer key</span></h1>
         <div class="tables">${chips}</div>
@@ -286,9 +295,9 @@
       const kid = [...KID_NAME].map((ch, i) =>
         `<span style="color:${colors[i % colors.length]}">${ch.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))}</span>`).join('');
       html += `<div class="cheer"><span class="kid">${kid}</span>,` +
-        `<span class="msg">${CHEER}</span>${star.replace('class="star"', 'class="mini-star"')}</div>`;
+        `<span class="msg">${CHEER}</span>${miniStar}</div>`;
     }
-    html += `</header><main class="grid" style="--c1:${c1}em;--c3:${c3}em">`;
+    html += (catArt ? '</div>' : '') + `</header><main class="grid" style="--c1:${c1}em;--c3:${c3}em">`;
 
     for (let r = 0; r < ROWS; r++) {
       if (r % GROUP === 0) html += (r ? '</div>' : '') + '<div class="block">';
@@ -305,12 +314,18 @@
 
     const sideLabel = SIDES > 1 ? ` · Side ${s + 1} of ${SIDES}` : '';
     html += `<div class="foot"><span>Sheet #${seed}${sideLabel}</span>` +
-      (last ? '<span>Check your work when you finish!</span>'
-            : '<span class="turn">Turn the page over &rarr;</span>') +
+      (last ? `<span>${TP.finish || 'Check your work when you finish!'}${TP.footPaws ? `<span class="paws">${TP.footPaws}</span>` : ''}</span>`
+            : `<span class="turn">${TP.turn || 'Turn the page over &rarr;'}</span>`) +
       '</div></div></div>';
     out += html;
   }
   document.getElementById('pages').innerHTML = out;
+
+  // Keep each title on one line: shrink it a little if it would run into the number badges
+  document.querySelectorAll('.title-row').forEach(row => {
+    const h = row.querySelector('h1'); let size = 21;
+    while (row.scrollWidth > row.clientWidth + 1 && size > 14) { size -= 0.5; h.style.fontSize = size + 'pt'; }
+  });
 
   // Keep the cheer on one line: shrink it a little if a long one would overflow
   document.querySelectorAll('.cheer').forEach(el => {

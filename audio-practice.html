@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Audio Practice – Multiply &amp; Divide</title>
+<script src="themes.js"></script>
 <style>
   :root {
     --ink: #1f2a37; --muted: #6b7686; --bg: #f2f5fa; --line: #dde2ea;
@@ -180,6 +181,7 @@
     .done-title { font-size: 30px; }
     .done-line { font-size: 18px; }
   }
+  .peek, .hero { display: none; }
 </style>
 </head>
 <body>
@@ -196,6 +198,7 @@
 <main>
   <!-- Start -->
   <section class="screen" id="start">
+    <div class="hero" id="heroStart"></div>
     <div class="hello">Hi, <span id="kidName"></span>!</div>
     <p class="lead">Listen to each problem. After the <b>beep</b>, say the answer — or type it.<br>Press <b>Stop</b> when you're done.</p>
     <div class="toggles">
@@ -216,6 +219,7 @@
       <span class="stat">⭐ Right <b id="nRight">0</b></span>
     </div>
     <div class="card" id="card">
+      <div class="peek" id="peek"></div>
       <div class="problem">
         <span id="pa"></span><span class="op" id="pop"></span><span id="pb"></span><span class="op">=</span>
         <span class="slot empty" id="slot"></span>
@@ -253,6 +257,7 @@
 
   <!-- Summary -->
   <section class="screen" id="done" hidden>
+    <div class="hero small" id="heroDone"></div>
     <div class="done-title" id="doneTitle"></div>
     <p class="done-line" id="doneLine"></p>
     <div class="tiles">
@@ -275,6 +280,8 @@
 
 <script>
 (function () {
+  const THEME = (window.WorksheetThemes && window.WorksheetThemes.active()) || {};
+  const TA = THEME.audio || {};
   // ================= Settings — change these any time =================
   // Name used in greetings and praise. It's set on the worksheet list page and saved only on this device.
   let KID_NAME = 'Superstar';
@@ -288,20 +295,20 @@
   const NAME_IN_PRAISE = 0.75;          // after a right answer
   const NAME_IN_QUESTION = 0.35;        // when reading a problem ("{name}, what's 3 times 5?")
   // {name} becomes the child's name
-  const PRAISE_NAMED = [
+  const PRAISE_NAMED = TA.praiseNamed || [
     'Terrific, {name}!', 'Amazing, {name}!', 'Awesome job, {name}!', '{name}, you got it!', 'Fantastic, {name}!',
     'Super smart, {name}!', 'Nailed it, {name}!', 'Way to go, {name}!', 'Brilliant, {name}!', 'Perfect, {name}!',
     'Woo-hoo! Go {name}!', 'You\'re on fire, {name}!', 'High five, {name}!', '{name}, you\'re a math star!',
     'Great job, {name}!', 'Yes, {name}! That\'s right!', 'Excellent, {name}!', '{name}, you\'re so smart!',
   ];
-  const PRAISE = [
+  const PRAISE = TA.praise || [
     'Terrific!', 'Amazing!', 'Awesome!', 'You got it!', 'Fantastic!', 'Super smart!',
     'Nailed it!', 'Way to go!', 'Brilliant!', 'Perfect!', 'Wonderful!', 'Woo-hoo!', 'Smarty pants!', 'Excellent!',
   ];
-  const ASK = ['{name}, what\'s {fact}?', 'Okay {name}, {fact}?', 'Here\'s one for you, {name}. {fact}?', '{name}, try this one. {fact}?'];
-  const FASTER = ['You got faster, {name}!', 'Speedy, {name}! You got faster!', 'Way faster, {name}! Awesome!', 'Zoom! So much faster, {name}!'];
-  const STREAK = ['{n} in a row, {name}! Amazing!', 'Wow, {name}! That\'s {n} in a row!', '{n} in a row! You\'re on a roll, {name}!'];
-  const OOPS = [                        // {fact} becomes "3 times 5", {ans} the right answer
+  const ASK = TA.ask || ['{name}, what\'s {fact}?', 'Okay {name}, {fact}?', 'Here\'s one for you, {name}. {fact}?', '{name}, try this one. {fact}?'];
+  const FASTER = TA.faster || ['You got faster, {name}!', 'Speedy, {name}! You got faster!', 'Way faster, {name}! Awesome!', 'Zoom! So much faster, {name}!'];
+  const STREAK = TA.streak || ['{n} in a row, {name}! Amazing!', 'Wow, {name}! That\'s {n} in a row!', '{n} in a row! You\'re on a roll, {name}!'];
+  const OOPS = TA.oops || [                        // {fact} becomes "3 times 5", {ans} the right answer
     'Nice try, {name}! {fact} is {ans}.',
     'Almost, {name}! {fact} is {ans}.',
     'Oops! {fact} is {ans}. You\'ve got this, {name}!',
@@ -326,6 +333,8 @@
   document.title = titleText;
   $('chips').innerHTML = (ops === 'div' ? 'Divide by:' : 'Tables:') +
     tables.map((t, i) => `<span class="chip" style="background:${colors[i % colors.length]}">${t}</span>`).join('');
+  if (THEME.icon) document.querySelector('.brand svg').outerHTML = THEME.icon;
+  if (THEME.art) { $('heroStart').innerHTML = THEME.art.sit; $('heroDone').innerHTML = THEME.art.sit; $('peek').innerHTML = THEME.art.peek; }
   $('kidName').innerHTML = [...KID_NAME].map((ch, i) => `<span style="color:${colors[i % colors.length]}">${ch.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))}</span>`).join('');
   $('goalLine').textContent = `⏱ Goal: answer each one in ${GOAL_SECONDS} seconds. Missed or slow ones come back until you're fast!`;
 
@@ -416,8 +425,10 @@
     o.connect(g); g.connect(actx.destination);
     o.start(t0); o.stop(t0 + dur + 0.05);
   }
-  const soundGood = () => { tone(784, 0, 0.22, 'sine', 0.16); tone(988, 0.08, 0.22, 'sine', 0.16); tone(1319, 0.16, 0.32, 'sine', 0.16); };
-  const soundBad  = () => { tone(330, 0, 0.16, 'triangle', 0.22); tone(247, 0.17, 0.28, 'triangle', 0.22); };
+  const soundGood = () => THEME.sounds ? THEME.sounds.good(actx) : chime();
+  const chime = () => { tone(784, 0, 0.22, 'sine', 0.16); tone(988, 0.08, 0.22, 'sine', 0.16); tone(1319, 0.16, 0.32, 'sine', 0.16); };
+  const soundBad  = () => THEME.sounds ? THEME.sounds.bad(actx) : buzz();
+  const buzz = () => { tone(330, 0, 0.16, 'triangle', 0.22); tone(247, 0.17, 0.28, 'triangle', 0.22); };
   const soundReady = () => tone(1175, 0, 0.12, 'sine', 0.09);   // "your turn" blip when the mic opens
 
   // ---------- Talking (text to speech) ----------
@@ -750,7 +761,8 @@
     readyAt = talkOn ? null : askedAt;               // the answer clock starts once the problem has been read
     setStatus(talkOn ? 'speaking' : (voiceOn ? 'listening' : 'type'));
     let ask = cur.words;
-    if (firstAsk) ask = `Hi ${KID_NAME}! Let's do some math. Here's your first one. ${cur.words}?`;
+    if (firstAsk) ask = TA.intro ? withName(TA.intro).replace('{fact}', cur.words)
+                             : `Hi ${KID_NAME}! Let's do some math. Here's your first one. ${cur.words}?`;
     else if (Math.random() < NAME_IN_QUESTION) ask = withName(pick(ASK)).replace('{fact}', cur.words);
     firstAsk = false;
     speak(ask, () => {
@@ -838,7 +850,7 @@
       setFeedback('✓ ' + phrase, 'good');
       $('status').textContent = note;
       updateStats();
-      setTimeout(() => { if (tok === session) speak(phrase, goNext, fast ? 800 : 1800); }, 350);
+      setTimeout(() => { if (tok === session) speak(phrase, goNext, fast ? 800 : 1800); }, (THEME.sounds && THEME.sounds.goodDelay) || 350);
     } else {
       fact.tricky = true; fact.cleared = false;
       saved[k] = { label: fact.label, ans: fact.ans, last: null }; persist();
@@ -856,7 +868,7 @@
         if (tok !== session || state !== 'lesson') return;
         speak(lessonSpeech, () => { if (state === 'lesson') { if (voiceOn) listen(); setStatus('lesson'); } }, 0);
         if (!talkOn) setStatus('lesson');
-      }, 550);
+      }, (THEME.sounds && THEME.sounds.badDelay) || 550);
     }
   }
 
@@ -871,8 +883,8 @@
 
     const pct = answered ? Math.round(100 * right / answered) : 0;
     const avg = times.length ? times.reduce((a, b) => a + b, 0) / times.length : 0;
-    $('doneTitle').textContent = answered === 0 ? `See you next time, ${KID_NAME}!`
-      : pct >= 90 ? `Amazing work, ${KID_NAME}!` : `Great work, ${KID_NAME}!`;
+    $('doneTitle').textContent = withName(answered === 0 ? (TA.doneNone || 'See you next time, {name}!')
+      : pct >= 90 ? (TA.doneGreat || 'Amazing work, {name}!') : (TA.doneGood || 'Great work, {name}!'));
     $('doneLine').innerHTML = `You answered <b>${answered}</b> problem${answered === 1 ? '' : 's'} in <b>${longTime(ms)}</b>` +
       (answered ? ` and got <b>${right}</b> right.` : '.');
     $('tAnswered').textContent = answered;
@@ -894,7 +906,7 @@
     if (answered) {
       speak(`You answered ${answered} problem${answered === 1 ? '' : 's'} in ${longTime(ms)}, and got ${right} right. ` +
             (cleared ? `You got faster on ${cleared} tricky ${cleared === 1 ? 'one' : 'ones'}! ` : '') +
-            (pct >= 90 ? `Amazing work, ${KID_NAME}!` : `Great job, ${KID_NAME}!`), null, 0);
+            withName(pct >= 90 ? (TA.doneSpokenGreat || 'Amazing work, {name}!') : (TA.doneSpokenGood || 'Great job, {name}!')), null, 0);
     }
     showTrickyNote();
   }

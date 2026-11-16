@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Math Worksheets</title>
+<script src="themes.js"></script>
 <style>
   :root { --ink: #1f2a37; --muted: #6b7686; --bg: #f2f5fa; --line: #dde2ea; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -21,6 +22,14 @@
   .namebox input:focus { outline: none; border-color: #3b7be0; box-shadow: 0 0 0 3px rgba(59,123,224,.15); }
   .namebox .saved { color: #1f9d55; font-size: 14px; }
   .namebox .hint { flex-basis: 100%; font-size: 13px; font-weight: 500; color: var(--muted); }
+  .themebox { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin-top: 12px; font-size: 15px; font-weight: 600; color: #3b4656; }
+  .themebox button {
+    display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 16px; font-weight: 700; color: var(--ink);
+    padding: 7px 14px 7px 10px; border-radius: 12px; border: 2px solid #d5dbe4; background: #fff; cursor: pointer;
+  }
+  .themebox button svg { width: 24px; height: 24px; }
+  .themebox button[aria-pressed="true"] { border-color: #3b7be0; background: #eef4ff; }
+  html.theme-cats .themebox button[aria-pressed="true"] { border-color: #f08a2c; background: #fff1e3; }
   section { margin: 30px 0 10px; }
   h2 { font-size: 21px; font-weight: 800; }
   h2 small { font-size: 14px; font-weight: 600; color: var(--muted); margin-left: 8px; }
@@ -62,6 +71,7 @@
       <span class="saved" id="nameSaved"></span>
       <span class="hint">Saved only on this device. Leave it empty to use “Superstar”.</span>
     </div>
+    <div class="themebox" id="themebox"><span>Theme:</span></div>
   </div>
 </header>
 
@@ -105,6 +115,25 @@
     msg.textContent = 'Saved ✓';
     clearTimeout(savedTimer); savedTimer = setTimeout(() => { msg.textContent = ''; }, 1500);
   });
+
+  // Theme picker (saved on this device)
+  const starIcon = document.querySelector('h1 svg').outerHTML;
+  const TH = window.WorksheetThemes;
+  if (TH) {
+    const cur = TH.name;
+    if (TH.active().icon) document.querySelector('h1 svg').outerHTML = TH.active().icon;
+    const box = document.getElementById('themebox');
+    for (const t of TH.list()) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('aria-pressed', String(t.id === cur));
+      b.innerHTML = (t.icon || starIcon) + t.label;
+      b.onclick = () => { TH.set(t.id); location.reload(); };
+      box.appendChild(b);
+    }
+  } else {
+    document.getElementById('themebox').hidden = true;
+  }
 
   const chipColors = ['#3b7be0', '#1f9d55', '#ee8a0f', '#8b5cf6', '#e0457b', '#0e9aa7'];
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
