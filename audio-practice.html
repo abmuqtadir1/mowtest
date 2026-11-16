@@ -284,16 +284,28 @@
   const MIN = 2, MAX = 12;              // each table runs 2 … 12
   const GOAL_SECONDS = 5;               // answers slower than this come back until they get faster
   const RETRY_AFTER = 3;                // a missed or slow problem comes back about this many problems later
+  // How often the name is used: 1 = every time, 0.5 = about half the time
+  const NAME_IN_PRAISE = 0.75;          // after a right answer
+  const NAME_IN_QUESTION = 0.35;        // when reading a problem ("{name}, what's 3 times 5?")
+  // {name} becomes the child's name
+  const PRAISE_NAMED = [
+    'Terrific, {name}!', 'Amazing, {name}!', 'Awesome job, {name}!', '{name}, you got it!', 'Fantastic, {name}!',
+    'Super smart, {name}!', 'Nailed it, {name}!', 'Way to go, {name}!', 'Brilliant, {name}!', 'Perfect, {name}!',
+    'Woo-hoo! Go {name}!', 'You\'re on fire, {name}!', 'High five, {name}!', '{name}, you\'re a math star!',
+    'Great job, {name}!', 'Yes, {name}! That\'s right!', 'Excellent, {name}!', '{name}, you\'re so smart!',
+  ];
   const PRAISE = [
     'Terrific!', 'Amazing!', 'Awesome!', 'You got it!', 'Fantastic!', 'Super smart!',
-    'Nailed it!', 'Way to go!', 'Brilliant!', 'Perfect!', 'Wonderful!', 'Woo-hoo!',
-    'Great job, ' + KID_NAME + '!', 'You\'re on fire!', 'Smarty pants!', 'Excellent!',
+    'Nailed it!', 'Way to go!', 'Brilliant!', 'Perfect!', 'Wonderful!', 'Woo-hoo!', 'Smarty pants!', 'Excellent!',
   ];
-  const FASTER = ['You got faster!', 'Speedy! You got faster!', 'Way faster! Awesome!', 'Zoom! So much faster!'];
+  const ASK = ['{name}, what\'s {fact}?', 'Okay {name}, {fact}?', 'Here\'s one for you, {name}. {fact}?', '{name}, try this one. {fact}?'];
+  const FASTER = ['You got faster, {name}!', 'Speedy, {name}! You got faster!', 'Way faster, {name}! Awesome!', 'Zoom! So much faster, {name}!'];
+  const STREAK = ['{n} in a row, {name}! Amazing!', 'Wow, {name}! That\'s {n} in a row!', '{n} in a row! You\'re on a roll, {name}!'];
   const OOPS = [                        // {fact} becomes "3 times 5", {ans} the right answer
-    'Oops! {fact} is {ans}.',
-    'Nice try! {fact} is {ans}.',
-    'Almost! {fact} is {ans}.',
+    'Nice try, {name}! {fact} is {ans}.',
+    'Almost, {name}! {fact} is {ans}.',
+    'Oops! {fact} is {ans}. You\'ve got this, {name}!',
+    'Good try, {name}! {fact} is {ans}.',
   ];
   // ====================================================================
   // Optional URL overrides:  ?ops=mul  (or div, mix)   ?tables=3,5
@@ -665,7 +677,7 @@
 
   // ---------- The game ----------
   let session = 0, state = 'idle', cur = null, typed = '';
-  let answered = 0, right = 0, t0 = 0, clockTimer = null, lastPraise = -1;
+  let answered = 0, right = 0, t0 = 0, clockTimer = null, lastPraise = -1, streak = 0, firstAsk = true;
   let askedAt = 0, readyAt = null, times = [], facts = new Map();
 
   function show(id) { for (const s of ['start', 'play', 'done']) $(s).hidden = s !== id; }
@@ -713,7 +725,7 @@
     try { if (navigator.audioSession) navigator.audioSession.type = voiceOn ? 'auto' : 'playback'; } catch (e) {}
     try { localStorage.setItem('audioPracticePrefs', JSON.stringify({ talk: $('optTalk').checked, voice: $('optVoice').checked })); } catch (e) {}
     $('voiceNote').textContent = '';
-    answered = 0; right = 0; times = []; facts = new Map();
+    answered = 0; right = 0; times = []; facts = new Map(); streak = 0; firstAsk = true;
     deck = []; upcoming = []; lastFam = null; recEnds = [];
     t0 = performance.now();
     clearInterval(clockTimer); clockTimer = setInterval(tick, 250); tick();
@@ -737,7 +749,11 @@
     askedAt = performance.now();
     readyAt = talkOn ? null : askedAt;               // the answer clock starts once the problem has been read
     setStatus(talkOn ? 'speaking' : (voiceOn ? 'listening' : 'type'));
-    speak(cur.words, () => {
+    let ask = cur.words;
+    if (firstAsk) ask = `Hi ${KID_NAME}! Let's do some math. Here's your first one. ${cur.words}?`;
+    else if (Math.random() < NAME_IN_QUESTION) ask = withName(pick(ASK)).replace('{fact}', cur.words);
+    firstAsk = false;
+    speak(ask, () => {
       if (state !== 'asking') return;
       if (readyAt === null) readyAt = performance.now();
       if (voiceOn) listen();
@@ -770,11 +786,13 @@
     nextProblem();
   }
 
+  const withName = t => t.split('{name}').join(KID_NAME);
   function pickPraise() {
-    let i;
-    do { i = Math.floor(Math.random() * PRAISE.length); } while (PRAISE.length > 1 && i === lastPraise);
-    lastPraise = i;
-    return PRAISE[i];
+    const list = Math.random() < NAME_IN_PRAISE ? PRAISE_NAMED : PRAISE;
+    let p;
+    do { p = withName(pick(list)); } while (list.length > 1 && p === lastPraise);
+    lastPraise = p;
+    return p;
   }
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
@@ -799,15 +817,15 @@
     fact.tries.push({ sec, ok });
 
     if (ok) {
-      right++;
+      right++; streak++;
       const fast = sec <= GOAL_SECONDS;
       typed = String(value); renderSlot();
       soundGood(); setCard('good');
-      let phrase = pickPraise(), note;
+      let phrase = streak % 5 === 0 ? withName(pick(STREAK)).replace('{n}', streak) : pickPraise(), note;
       if (fast && wasTricky) {                       // a tricky one, now fast: it's off the tricky list
         fact.tricky = true; fact.cleared = true;
         delete saved[k]; persist();
-        phrase = pick(FASTER);
+        phrase = withName(pick(FASTER));
         note = prevSec && prevSec > sec ? `⏱ ${f1(sec)} seconds, down from ${f1(prevSec)}! 🚀` : `⏱ ${f1(sec)} seconds. Fast this time! 🚀`;
       } else if (fast) {
         note = `⏱ ${f1(sec)} seconds`;
@@ -827,7 +845,8 @@
       requeue(cur, RETRY_AFTER);                     // it comes back a few problems later
       typed = String(cur.ans); renderSlot();         // show the right answer in the box
       soundBad(); setCard('bad');
-      const tpl = pick(OOPS);
+      streak = 0;
+      const tpl = withName(pick(OOPS));
       setFeedback(tpl.replace('{fact}', labelOf(cur)).replace('{ans}', cur.ans), 'bad');
       $('status').textContent = 'You said ' + value + '. Let\'s see why…';
       updateStats();
