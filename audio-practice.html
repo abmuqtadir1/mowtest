@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audio Practice – Multiply &amp; Divide</title>
+<style>
+  :root {
+    --ink: #1f2a37; --muted: #6b7686; --bg: #f2f5fa; --line: #dde2ea;
+    --blue: #3b7be0; --green: #1f9d55; --orange: #ee8a0f; --purple: #8b5cf6; --red: #d63b3b;
+    --good-bg: #e8f7ee; --bad-bg: #fff3e6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; }
+  body {
+    font-family: "Segoe UI", Arial, "Liberation Sans", Helvetica, sans-serif;
+    color: var(--ink); background: var(--bg);
+    display: flex; flex-direction: column; min-height: 100vh;
+  }
+  button { font-family: inherit; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  button:disabled { cursor: default; opacity: .5; }
+  .pad, .problem, .controls, .stats { user-select: none; -webkit-user-select: none; }
+  .short { display: none; }
+  [hidden] { display: none !important; }
+
+  /* Top bar */
+  .top {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 12px 20px; background: #fff; border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; }
+  .brand svg { width: 26px; height: 26px; flex: none; }
+  .top a { color: var(--muted); font-weight: 600; font-size: 15px; text-decoration: none; white-space: nowrap; }
+  .top a:hover { color: var(--ink); }
+  .chips { display: flex; gap: 6px; align-items: center; color: var(--muted); font-weight: 600; font-size: 14px; }
+  .chip {
+    min-width: 28px; height: 28px; padding: 0 6px; border-radius: 14px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 14px;
+  }
+
+  main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px 16px 34px; }
+  .screen { width: 100%; max-width: 720px; text-align: center; }
+
+  /* Start screen */
+  .hello { font-size: 46px; font-weight: 800; }
+  .lead { font-size: 20px; color: #3b4656; margin: 10px 0 24px; line-height: 1.45; }
+  .toggles { display: inline-flex; flex-direction: column; gap: 12px; text-align: left; margin-bottom: 26px; }
+  .toggle { display: flex; align-items: center; gap: 12px; font-size: 18px; font-weight: 600; cursor: pointer; }
+  .toggle input { width: 22px; height: 22px; accent-color: var(--blue); cursor: pointer; }
+  .toggle.off { color: #9aa3af; cursor: default; }
+  .big {
+    font-size: 30px; font-weight: 800; padding: 18px 64px; border-radius: 18px; border: none;
+    color: #fff; background: var(--green); box-shadow: 0 6px 0 #167a41;
+  }
+  .big:active { transform: translateY(3px); box-shadow: 0 3px 0 #167a41; }
+  .goal { margin-top: 22px; font-size: 16px; font-weight: 600; color: #3b4656; }
+  .note { margin-top: 12px; font-size: 14px; color: var(--muted); line-height: 1.5; }
+  .linkish { background: none; border: none; color: var(--blue); font-weight: 600; font-size: inherit; text-decoration: underline; padding: 0; }
+
+  /* Practice screen */
+  .stats { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .stat { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 7px 14px; font-size: 16px; font-weight: 600; color: #3b4656; }
+  .stat b { font-variant-numeric: tabular-nums; color: var(--ink); }
+  .card {
+    background: #fff; border: 3px solid var(--line); border-radius: 24px; padding: 28px 16px 18px;
+    transition: background .2s, border-color .2s;
+  }
+  .card.good { background: var(--good-bg); border-color: var(--green); }
+  .card.bad  { background: var(--bad-bg);  border-color: var(--orange); }
+  .problem {
+    font-size: min(84px, 11.5vw); font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1;
+    display: flex; align-items: center; justify-content: center; gap: .19em;
+  }
+  .problem .op { color: #5a6577; font-weight: 700; }
+  .slot {
+    min-width: 2.1em; height: 1.25em; padding: 0 .15em; border: 4px solid #9aa6b8; border-radius: 18px;
+    display: inline-flex; align-items: center; justify-content: center; color: var(--blue); background: #fff;
+  }
+  .slot.empty::after { content: '?'; color: #c3cad5; }
+  .card.good .slot { color: var(--green); border-color: var(--green); }
+  .card.bad  .slot { color: #c46a00; border-color: var(--orange); }
+  .feedback { min-height: 40px; margin-top: 14px; font-size: 28px; font-weight: 800; }
+  .feedback.good { color: var(--green); }
+  .feedback.bad  { color: #c46a00; }
+  .status { min-height: 24px; margin-top: 4px; font-size: 16px; color: var(--muted); font-weight: 600; }
+  .dot {
+    display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--red);
+    margin-right: 7px; vertical-align: 1px; animation: pulse 1.2s infinite;
+  }
+  @keyframes pulse { 50% { opacity: .25; } }
+
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; max-width: 330px; margin: 16px auto 0; }
+  .pad button {
+    font-size: 27px; font-weight: 700; padding: 9px 0; border-radius: 14px;
+    border: 1px solid #cfd6e0; background: #fff; color: var(--ink); box-shadow: 0 3px 0 #cfd6e0;
+  }
+  .pad button:active { transform: translateY(2px); box-shadow: 0 1px 0 #cfd6e0; }
+  .pad .ok { background: var(--blue); border-color: var(--blue); color: #fff; box-shadow: 0 3px 0 #2a5fb5; }
+  .pad .back { color: var(--muted); }
+
+  /* Mini-lesson after a wrong answer */
+  .lesson {
+    display: flex; gap: 26px; align-items: center; justify-content: center;
+    background: #fff; border: 2px solid #f3c48a; border-radius: 20px; padding: 18px 20px; margin-top: 14px; text-align: left;
+  }
+  .dots { display: flex; flex-direction: column; gap: 5px; flex: none; }
+  .drow { display: flex; align-items: center; gap: 4px; opacity: 0; animation: slideIn .3s forwards; }
+  .drow i { width: 13px; height: 13px; border-radius: 50%; background: var(--blue); display: inline-block; }
+  .drow:nth-child(even) i { background: var(--orange); }
+  .drow b { margin-left: 8px; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .drow:last-child b { color: var(--green); font-size: 16px; }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+  .lesson-text { max-width: 360px; }
+  .lesson-head { font-size: 20px; font-weight: 800; line-height: 1.3; }
+  .count-label { margin-top: 12px; font-size: 15px; color: var(--muted); font-weight: 700; }
+  .count { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .count span { background: #eef3fb; border-radius: 8px; padding: 3px 8px; font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; }
+  .count span:last-child { background: var(--green); color: #fff; }
+  .lesson-tail { margin-top: 12px; font-size: 20px; font-weight: 800; color: var(--green); }
+  .gotit {
+    margin-top: 16px; font-size: 20px; font-weight: 800; padding: 12px 26px; border-radius: 14px; border: none;
+    background: var(--blue); color: #fff; box-shadow: 0 4px 0 #2a5fb5;
+  }
+  .gotit:active { transform: translateY(2px); box-shadow: 0 2px 0 #2a5fb5; }
+
+  .controls { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px 12px; margin-top: 16px; }
+  .btn.mic { min-width: 9.5em; }
+  .btn.mic.on { border-color: var(--red); color: var(--red); background: #fff5f5; }
+  .btn {
+    font-size: 17px; font-weight: 700; padding: 11px 22px; border-radius: 12px;
+    border: 1px solid #c4cad4; background: #fff; color: var(--ink);
+  }
+  .btn:hover { background: #f4f6f9; }
+  .btn.stop { background: var(--red); border-color: var(--red); color: #fff; }
+  .btn.stop:hover { background: #bf3030; }
+  .btn.go { background: var(--green); border-color: var(--green); color: #fff; }
+
+  /* Summary screen */
+  .done-title { font-size: 40px; font-weight: 800; }
+  .done-line { font-size: 22px; color: #3b4656; margin-top: 10px; line-height: 1.4; }
+  .done-line b { color: var(--ink); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 24px 0; }
+  .tile { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 16px 10px; }
+  .tile .v { font-size: 32px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .tile .l { font-size: 14px; color: var(--muted); font-weight: 600; margin-top: 4px; }
+  .tricky { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 16px; text-align: left; margin-bottom: 24px; }
+  .tricky h3 { font-size: 18px; }
+  .tricky .sub { font-size: 14px; color: var(--muted); margin: 4px 0 12px; }
+  .tricky ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .tricky li {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    background: var(--bad-bg); border: 1px solid #f3c48a; border-radius: 12px; padding: 8px 12px;
+  }
+  .tricky li.cleared { background: var(--good-bg); border-color: #9fd9b5; }
+  .tricky .fact { font-weight: 800; font-size: 19px; font-variant-numeric: tabular-nums; min-width: 8.5em; }
+  .tricky .tries { font-size: 15px; color: #3b4656; font-weight: 600; font-variant-numeric: tabular-nums; flex: 1; }
+  .tricky .mark { font-size: 14px; font-weight: 800; color: #c46a00; }
+  .tricky li.cleared .mark { color: var(--green); }
+
+  @media (max-width: 600px) {
+    .top { padding: 10px 14px; }
+    .brand { font-size: 16px; gap: 8px; }
+    .brand svg { width: 22px; height: 22px; }
+    .top .chips { display: none; }
+    .long { display: none; } .short { display: inline; }
+    main { padding: 14px 12px 28px; }
+    .hello { font-size: 34px; }
+    .lead { font-size: 17px; }
+    .big { font-size: 26px; padding: 16px 52px; }
+    .stat { font-size: 14px; padding: 6px 10px; }
+    .card { padding: 22px 10px 14px; border-radius: 20px; }
+    .feedback { font-size: 22px; min-height: 32px; }
+    .status { font-size: 14px; }
+    .pad { gap: 8px; }
+    .pad button { font-size: 24px; padding: 8px 0; }
+    .lesson { flex-direction: column; gap: 14px; padding: 14px; }
+    .lesson-head, .lesson-tail { font-size: 18px; }
+    .btn { font-size: 16px; padding: 10px 16px; }
+    .done-title { font-size: 30px; }
+    .done-line { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#f5b301" stroke="#d99a00" stroke-width="1" stroke-linejoin="round" d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg>
+    <span id="pageTitle">Audio Practice</span>
+  </div>
+  <div class="chips" id="chips"></div>
+  <a href="index.html">&larr; <span class="long">All worksheets</span><span class="short">Back</span></a>
+</div>
+
+<main>
+  <!-- Start -->
+  <section class="screen" id="start">
+    <div class="hello">Hi, <span id="kidName"></span>!</div>
+    <p class="lead">Listen to each problem, then <b>say</b> or <b>type</b> the answer.<br>Press <b>Stop</b> when you're done.</p>
+    <div class="toggles">
+      <label class="toggle"><input type="checkbox" id="optTalk" checked> 🔊 Read the problems out loud</label>
+      <label class="toggle" id="voiceToggle"><input type="checkbox" id="optVoice" checked> 🎤 Answer with my voice</label>
+    </div>
+    <div><button class="big" id="btnStart">Start</button></div>
+    <p class="goal" id="goalLine"></p>
+    <p class="note" id="trickyNote" hidden></p>
+    <p class="note" id="startNote"></p>
+  </section>
+
+  <!-- Practice -->
+  <section class="screen" id="play" hidden>
+    <div class="stats">
+      <span class="stat">⏱ <b id="clock">0:00</b></span>
+      <span class="stat">Answered <b id="nAnswered">0</b></span>
+      <span class="stat">⭐ Right <b id="nRight">0</b></span>
+    </div>
+    <div class="card" id="card">
+      <div class="problem">
+        <span id="pa"></span><span class="op" id="pop"></span><span id="pb"></span><span class="op">=</span>
+        <span class="slot empty" id="slot"></span>
+      </div>
+      <div class="feedback" id="feedback"></div>
+      <div class="status" id="status"></div>
+    </div>
+
+    <div class="pad" id="pad">
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+      <button data-k="back" class="back" aria-label="Erase">⌫</button><button data-k="0">0</button>
+      <button data-k="ok" class="ok" aria-label="Check">✓</button>
+    </div>
+
+    <div class="lesson" id="lesson" hidden>
+      <div class="dots" id="lessonDots"></div>
+      <div class="lesson-text">
+        <div class="lesson-head" id="lessonHead"></div>
+        <div class="count-label" id="lessonCountLabel"></div>
+        <div class="count" id="lessonCount"></div>
+        <div class="lesson-tail" id="lessonTail"></div>
+        <button class="gotit" id="btnGotIt">Got it! Next &rarr;</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn mic" id="btnMic" hidden>🎤 Tap to talk</button>
+      <button class="btn" id="btnRepeat">🔁 Hear it again</button>
+      <button class="btn stop" id="btnStop">Stop</button>
+    </div>
+    <p class="note" id="voiceNote"></p>
+  </section>
+
+  <!-- Summary -->
+  <section class="screen" id="done" hidden>
+    <div class="done-title" id="doneTitle"></div>
+    <p class="done-line" id="doneLine"></p>
+    <div class="tiles">
+      <div class="tile"><div class="v" id="tAnswered">0</div><div class="l">problems answered</div></div>
+      <div class="tile"><div class="v" id="tRight">0</div><div class="l">right</div></div>
+      <div class="tile"><div class="v" id="tTime">0:00</div><div class="l">total time</div></div>
+      <div class="tile"><div class="v" id="tAvg">–</div><div class="l">average seconds per answer</div></div>
+    </div>
+    <div class="tricky" id="trickyBox" hidden>
+      <h3>Tricky ones</h3>
+      <p class="sub" id="trickySub"></p>
+      <ul id="trickyList"></ul>
+    </div>
+    <div class="controls">
+      <button class="btn go" id="btnAgain">Play again</button>
+      <a class="btn" href="index.html" style="text-decoration:none">All worksheets</a>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  // ================= Settings — change these any time =================
+  // Name used in greetings and praise. It's set on the worksheet list page and saved only on this device.
+  let KID_NAME = 'Superstar';
+  try { KID_NAME = (localStorage.getItem('worksheetKidName') || '').trim().slice(0, 20) || KID_NAME; } catch (e) {}
+  const OPS = 'mix';                    // 'mul' = × only, 'div' = ÷ only, 'mix' = both (about half each)
+  const DEFAULT_TABLES = [2, 3, 5, 10]; // tables to practice (÷ problems divide by these)
+  const MIN = 2, MAX = 12;              // each table runs 2 … 12
+  const GOAL_SECONDS = 5;               // answers slower than this come back until they get faster
+  const RETRY_AFTER = 3;                // a missed or slow problem comes back about this many problems later
+  const PRAISE = [
+    'Terrific!', 'Amazing!', 'Awesome!', 'You got it!', 'Fantastic!', 'Super smart!',
+    'Nailed it!', 'Way to go!', 'Brilliant!', 'Perfect!', 'Wonderful!', 'Woo-hoo!',
+    'Great job, ' + KID_NAME + '!', 'You\'re on fire!', 'Smarty pants!', 'Excellent!',
+  ];
+  const FASTER = ['You got faster!', 'Speedy! You got faster!', 'Way faster! Awesome!', 'Zoom! So much faster!'];
+  const OOPS = [                        // {fact} becomes "3 times 5", {ans} the right answer
+    'Oops! {fact} is {ans}.',
+    'Nice try! {fact} is {ans}.',
+    'Almost! {fact} is {ans}.',
+  ];
+  // ====================================================================
+  // Optional URL overrides:  ?ops=mul  (or div, mix)   ?tables=3,5
+
+  const $ = id => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const ops = ['mul', 'div', 'mix'].includes(params.get('ops')) ? params.get('ops') : OPS;
+  let tables = DEFAULT_TABLES;
+  if (params.get('tables')) {
+    const t = params.get('tables').split(',').map(s => parseInt(s, 10)).filter(n => Number.isFinite(n) && n > 0 && n < 100);
+    if (t.length) tables = t;
+  }
+
+  // ---------- Page setup ----------
+  const colors = ['#3b7be0', '#1f9d55', '#ee8a0f', '#8b5cf6', '#e0457b', '#0e9aa7'];
+  const titleText = ops === 'mul' ? 'Audio Practice: Multiplication' : ops === 'div' ? 'Audio Practice: Division' : 'Audio Practice: Multiply & Divide';
+  $('pageTitle').textContent = titleText;
+  document.title = titleText;
+  $('chips').innerHTML = (ops === 'div' ? 'Divide by:' : 'Tables:') +
+    tables.map((t, i) => `<span class="chip" style="background:${colors[i % colors.length]}">${t}</span>`).join('');
+  $('kidName').innerHTML = [...KID_NAME].map((ch, i) => `<span style="color:${colors[i % colors.length]}">${ch.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))}</span>`).join('');
+  $('goalLine').textContent = `⏱ Goal: answer each one in ${GOAL_SECONDS} seconds. Missed or slow ones come back until you're fast!`;
+
+  // ---------- Tricky problems remembered between sessions (saved in this browser) ----------
+  const STORE = 'audioPracticeTricky:' + ops + ':' + tables.join(',');
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(STORE) || '{}') || {}; } catch (e) { saved = {}; }
+  const persist = () => { try { localStorage.setItem(STORE, JSON.stringify(saved)); } catch (e) {} };
+  function showTrickyNote() {
+    const n = Object.keys(saved).length;
+    const el = $('trickyNote');
+    el.hidden = n === 0;
+    if (n) {
+      el.innerHTML = `⭐ ${n} tricky one${n === 1 ? '' : 's'} from last time will come up extra. ` +
+        `<button class="linkish" id="btnForget">Start fresh</button>`;
+      $('btnForget').onclick = () => { saved = {}; persist(); showTrickyNote(); };
+    }
+  }
+
+  // ---------- Problems ----------
+  // × : table × n (either way round)   ÷ : (table × n) ÷ table = n
+  const shuffle = arr => {
+    for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+    return arr;
+  };
+  const family = p => Math.min(p.t, p.n) + 'x' + Math.max(p.t, p.n);
+  const keyOf = p => p.op === 'mul' ? 'mul:' + family(p) : 'div:' + (p.t * p.n) + '/' + p.t;
+  const labelOf = p => `${p.a} ${p.sym} ${p.b}`;
+  function makeProblem(op, t, n) {
+    if (op === 'mul') {
+      const swap = Math.random() < 0.5;
+      const a = swap ? n : t, b = swap ? t : n;
+      return { op, t, n, a, b, ans: t * n, sym: '×', words: `${a} times ${b}` };
+    }
+    return { op, t, n, a: t * n, b: t, ans: n, sym: '÷', words: `${t * n} divided by ${t}` };
+  }
+  function makeDeck() {
+    const d = [];
+    for (const t of tables) for (let n = MIN; n <= MAX; n++) {
+      for (const op of (ops === 'mix' ? ['mul', 'div'] : [ops])) {
+        const p = makeProblem(op, t, n);
+        d.push(p);
+        if (saved[keyOf(p)]) d.push(makeProblem(op, t, n));   // tricky ones from last time come up twice as often
+      }
+    }
+    return shuffle(d);
+  }
+  let deck = [], upcoming = [], lastFam = null;
+  function draw(avoid) {
+    if (!deck.length) deck = makeDeck();
+    let i = deck.findIndex(p => family(p) !== avoid);
+    if (i < 0) { deck = deck.concat(makeDeck()); i = deck.findIndex(p => family(p) !== avoid); if (i < 0) i = 0; }
+    return deck.splice(i, 1)[0];
+  }
+  function fillUpcoming() {
+    while (upcoming.length < RETRY_AFTER + 3) {
+      const prev = upcoming.length ? family(upcoming[upcoming.length - 1]) : lastFam;
+      upcoming.push(draw(prev));
+    }
+  }
+  // Put a problem back in line so it comes up again a few problems from now
+  function requeue(p, after) {
+    const k = keyOf(p);
+    if (upcoming.some(u => keyOf(u) === k)) return;
+    fillUpcoming();
+    let i = Math.max(1, after - 1);
+    while (i < upcoming.length && (family(upcoming[i - 1]) === family(p) || family(upcoming[i]) === family(p))) i++;
+    upcoming.splice(i, 0, Object.assign({}, p, { retry: true }));
+  }
+
+  // ---------- Sounds (made in the browser, no files needed) ----------
+  let actx = null;
+  function ensureAudio() {
+    try {
+      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+    } catch (e) { actx = null; }
+  }
+  function tone(freq, at, dur, type, vol) {
+    if (!actx) return;
+    if (actx.state !== 'running') { try { actx.resume(); } catch (e) {} }
+    const t0 = actx.currentTime + at;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(actx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.05);
+  }
+  const soundGood = () => { tone(784, 0, 0.22, 'sine', 0.16); tone(988, 0.08, 0.22, 'sine', 0.16); tone(1319, 0.16, 0.32, 'sine', 0.16); };
+  const soundBad  = () => { tone(330, 0, 0.16, 'triangle', 0.22); tone(247, 0.17, 0.28, 'triangle', 0.22); };
+
+  // ---------- Talking (text to speech) ----------
+  const canSpeak = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+  let talkOn = true, voice = null, keepUtterance = null;
+  function pickVoice() {
+    if (!canSpeak) return;
+    const vs = speechSynthesis.getVoices();
+    const prefs = [/Aria.*Natural/i, /Jenny.*Natural/i, /Ana.*Natural/i, /Michelle.*Natural/i, /Google US English/i, /Samantha/i, /Zira/i];
+    for (const re of prefs) { const v = vs.find(x => re.test(x.name)); if (v) { voice = v; return; } }
+    voice = vs.find(x => /^en[-_]US/i.test(x.lang)) || vs.find(x => /^en/i.test(x.lang)) || null;
+  }
+  if (canSpeak) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+
+  // Speak, then call `then`. If talking is off, wait quietMs instead.
+  function speak(text, then, quietMs) {
+    const tok = session;
+    let finished = false, fallback = null;
+    const finish = () => {
+      if (finished) return;
+      finished = true; clearTimeout(fallback);
+      if (tok === session && then) then();
+    };
+    if (!talkOn || !canSpeak) { fallback = setTimeout(finish, quietMs || 0); return; }
+    const u = new SpeechSynthesisUtterance(text);
+    keepUtterance = u;                               // keeps Chrome from dropping the "end" event
+    if (voice) { u.voice = voice; u.lang = voice.lang; } else { u.lang = 'en-US'; }
+    u.rate = 0.95; u.pitch = 1.05;
+    u.onend = finish; u.onerror = finish;
+    fallback = setTimeout(finish, 1800 + text.length * 110); // safety net if the browser never says it finished
+    if (speechSynthesis.paused) speechSynthesis.resume();
+    // Cancelling and speaking in the same instant can drop the new sentence on iPhone, so wait a moment
+    if (speechSynthesis.speaking || speechSynthesis.pending) { speechSynthesis.cancel(); setTimeout(() => speechSynthesis.speak(u), 80); }
+    else speechSynthesis.speak(u);
+  }
+
+  // ---------- Listening (speech recognition) ----------
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const canListen = !!SR;
+  // Phones and tablets (iPhone, iPad, Android) don't keep listening well, and Android beeps each time it
+  // starts, so there the page listens for one answer at a time and shows a "Tap to talk" button.
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isTouch = isIOS || /Android/i.test(navigator.userAgent);
+  const singleShot = isTouch;
+  let voiceOn = true, rec = null, recWanted = false, recBusy = false, recEnds = [], startedByTap = false, settle = null;
+  function getRec() {
+    if (rec || !SR) return rec;
+    rec = new SR();
+    rec.lang = 'en-US'; rec.continuous = !singleShot; rec.interimResults = true; rec.maxAlternatives = 5;
+    rec.onstart = () => {
+      if (!recWanted) return;
+      setMic(true);
+      setStatus(state === 'lesson' ? 'lesson' : state === 'asking' ? 'listening' : null);
+    };
+    rec.onresult = e => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i], alts = [];
+        for (let j = 0; j < r.length; j++) alts.push(r[j].transcript);
+        onHeard(alts, r.isFinal);
+      }
+    };
+    rec.onerror = e => {
+      // On a phone, an automatic start can be refused until the mic is tapped once; that's not a real block
+      if ((e.error === 'not-allowed' || e.error === 'service-not-allowed') && singleShot && !startedByTap) {
+        recWanted = false;
+        setStatus(state === 'asking' ? 'tap' : state === 'lesson' ? 'lesson' : null);
+        return;
+      }
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') voiceTrouble('The microphone is blocked, so type the answers instead. (Allow the microphone in the address bar to use your voice.)');
+      else if (e.error === 'audio-capture') voiceTrouble('No microphone found, so type the answers instead.');
+      else if (e.error === 'network') voiceTrouble('Voice answers need the internet. Type the answers for now.');
+    };
+    rec.onend = () => {
+      recBusy = false;
+      setMic(false);
+      if (singleShot) {                              // phones: wait for a tap on the mic for the next try
+        if (recWanted && voiceOn) { recWanted = false; setStatus(state === 'lesson' ? 'lesson' : state === 'asking' ? 'tap' : null); }
+        return;
+      }
+      if (recWanted && voiceOn) {                    // computers: the browser stops listening now and then: start again
+        const now = Date.now();
+        recEnds = recEnds.filter(t => now - t < 8000); recEnds.push(now);
+        if (recEnds.length > 6) { voiceTrouble('Having trouble hearing. Type the answers instead.'); return; }
+        setTimeout(() => { if (recWanted && !recBusy) startRec(); }, 150);
+      }
+    };
+    return rec;
+  }
+  function startRec() { try { getRec().start(); recBusy = true; } catch (e) { /* already listening */ } }
+  function listen(byTap) {
+    if (!voiceOn || !canListen) return;
+    startedByTap = !!byTap;
+    recWanted = true;
+    if (!recBusy) startRec();
+  }
+  function pauseListening() {                        // stop listening while the page talks, so it doesn't hear itself
+    recWanted = false;
+    clearTimeout(settle);
+    setMic(false);
+    if (rec && recBusy) { try { rec.abort(); } catch (e) {} }
+  }
+  function setMic(on) {
+    const b = $('btnMic');
+    b.hidden = !(voiceOn && canListen) || state === 'done' || state === 'idle';
+    b.classList.toggle('on', on);
+    b.innerHTML = on ? '<span class="dot"></span>Listening…' : '🎤 Tap to talk';
+  }
+  function voiceTrouble(msg) {
+    voiceOn = false; recWanted = false;
+    setMic(false);
+    $('voiceNote').textContent = '🎤 ' + msg;
+    if (state === 'asking') setStatus('type');
+    if (state === 'lesson') setStatus('lesson');
+  }
+
+  // Turn what was heard ("15", "fifteen", "one hundred and ten", "it's 24") into a number
+  const ONES = { zero: 0, oh: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
+    ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19 };
+  const TENS = { twenty: 20, thirty: 30, forty: 40, fourty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
+  const SOUND_ALIKE = { to: 2, too: 2, for: 4, fore: 4, ate: 8, won: 1, tree: 3, free: 3, sicks: 6, tin: 10, nein: 9 };
+  function parseSpoken(text) {
+    if (!text) return null;
+    const s = text.toLowerCase().replace(/(\d),(\d)/g, '$1$2').replace(/[^a-z0-9 ]+/g, ' ').trim();
+    if (!s) return null;
+    const runs = s.match(/\d+/g);
+    if (runs) return parseInt(runs[runs.length - 1], 10);   // the last number said wins ("15… no, 16")
+    const words = s.split(/\s+/);
+    if (words.length === 1 && words[0] in SOUND_ALIKE) return SOUND_ALIKE[words[0]];
+    let last = null, val = null;
+    const end = () => { if (val !== null) last = val; val = null; };
+    for (let i = 0; i < words.length; i++) {
+      const w = words[i];
+      if (w in TENS) {
+        if (val !== null && val % 100 !== 0) end();
+        val = (val || 0) + TENS[w];
+      } else if (w in ONES) {
+        const joins = val !== null && ((val % 100 >= 20 && val % 10 === 0 && ONES[w] < 10) || (val > 0 && val % 100 === 0));
+        if (!joins) end();
+        val = (val || 0) + ONES[w];
+      } else if (w === 'hundred') {
+        val = (val === null || val === 0 ? 1 : val) * 100;
+      } else if (w === 'a' && words[i + 1] === 'hundred') {
+        end(); val = 1;
+      } else if (w === 'and' && val !== null && val > 0 && val % 100 === 0) {
+        // "one hundred and ten"
+      } else {
+        end();
+      }
+    }
+    end();
+    return last;
+  }
+  // "fifteen" and "fifty" sound alike; give the benefit of the doubt only if the browser also heard the right one
+  const TEEN_TY = { 13: 30, 30: 13, 14: 40, 40: 14, 15: 50, 50: 15, 16: 60, 60: 16, 17: 70, 70: 17, 18: 80, 80: 18, 19: 90, 90: 19 };
+
+  function lessonCommand(t) {
+    if (/\b(stop|i'?m done|all done|the end)\b/i.test(t)) return stopGame;
+    if (/\b(next|ok|okay|got it|yes|yeah|ready|go)\b/i.test(t)) return gotIt;
+    if (/\b(repeat|again|what|huh|say it)\b/i.test(t)) return hearAgain;
+    return null;
+  }
+  function onHeard(alts, isFinal) {
+    clearTimeout(settle);
+    const top = (alts[0] || '').trim();
+    if (state === 'lesson') {
+      const cmd = lessonCommand(top);
+      if (!cmd) return;
+      if (isFinal) cmd(); else settle = setTimeout(() => { if (state === 'lesson') cmd(); }, 700);
+      return;
+    }
+    if (state !== 'asking') return;
+    if (top) setStatus('heard', top);
+    const decide = () => {
+      if (state !== 'asking') return;
+      let n = parseSpoken(top);
+      if (n === null) for (const a of alts.slice(1)) { const m = parseSpoken(a); if (m !== null) { n = m; break; } }
+      if (n === null) {
+        if (/\b(stop|i'?m done|all done|the end)\b/i.test(top)) { stopGame(); return; }
+        if (/\b(repeat|again|what|huh|say it)\b/i.test(top)) { hearAgain(); return; }
+        if (recWanted) setStatus('listening');
+        return;
+      }
+      if (n !== cur.ans && TEEN_TY[n] === cur.ans && alts.some(a => parseSpoken(a) === cur.ans)) n = cur.ans;
+      submit(n);
+    };
+    if (isFinal) decide();
+    else if (parseSpoken(top) !== null) settle = setTimeout(decide, 1200);
+  }
+
+  // ---------- Mini-lesson for a missed problem ----------
+  const PLURAL = { 1: 'ones', 2: 'twos', 3: 'threes', 4: 'fours', 5: 'fives', 6: 'sixes', 7: 'sevens', 8: 'eights',
+    9: 'nines', 10: 'tens', 11: 'elevens', 12: 'twelves' };
+  const plural = t => PLURAL[t] || (t + 's');
+  let lessonSpeech = '';
+  function showLesson(p, opening) {
+    const t = p.t, n = p.n;                          // count by the table number, n times
+    const steps = Array.from({ length: n }, (_, i) => t * (i + 1));
+    let head, countLabel, tail, say;
+    if (p.op === 'mul') {
+      head = `${p.a} × ${p.b} is the same as ${n} group${n === 1 ? '' : 's'} of ${t}.`;
+      countLabel = `Count by ${t}s, ${n} time${n === 1 ? '' : 's'}:`;
+      tail = `${p.a} × ${p.b} = ${p.ans}`;
+      say = `Count by ${plural(t)}: ${steps.join(', ')}.`;
+    } else {
+      head = `${p.a} ÷ ${t} means: how many ${t}s make ${p.a}?`;
+      countLabel = `Count by ${t}s until you get to ${p.a}:`;
+      tail = `That's ${n} ${t}s, so ${p.a} ÷ ${t} = ${n}`;
+      say = `How many ${plural(t)} make ${p.a}? Count by ${plural(t)}: ${steps.join(', ')}. That's ${n} ${plural(t)}.`;
+    }
+    $('lessonDots').innerHTML = steps.map((s, i) =>
+      `<div class="drow" style="animation-delay:${(i * 0.42).toFixed(2)}s">${'<i></i>'.repeat(t)}<b>${s}</b></div>`).join('');
+    $('lessonHead').textContent = head;
+    $('lessonCountLabel').textContent = countLabel;
+    $('lessonCount').innerHTML = steps.map(s => `<span>${s}</span>`).join('');
+    $('lessonTail').textContent = tail;
+    $('pad').hidden = true;
+    $('lesson').hidden = false;
+    if (window.innerHeight < 900) setTimeout(() => $('lesson').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
+    lessonSpeech = opening + ' ' + say;
+  }
+  function hideLesson() {
+    if (!$('lesson').hidden && window.innerHeight < 900) window.scrollTo({ top: 0, behavior: 'smooth' });
+    $('lesson').hidden = true; $('pad').hidden = false;
+  }
+
+  // ---------- The game ----------
+  let session = 0, state = 'idle', cur = null, typed = '';
+  let answered = 0, right = 0, t0 = 0, clockTimer = null, lastPraise = -1;
+  let askedAt = 0, readyAt = null, times = [], facts = new Map();
+
+  function show(id) { for (const s of ['start', 'play', 'done']) $(s).hidden = s !== id; }
+  const mmss = ms => { const s = Math.floor(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+  const f1 = x => (Math.round(x * 10) / 10).toFixed(1);
+  function longTime(ms) {
+    const s = Math.round(ms / 1000), m = Math.floor(s / 60), r = s % 60;
+    const mins = m ? `${m} minute${m === 1 ? '' : 's'}` : '';
+    const secs = `${r} second${r === 1 ? '' : 's'}`;
+    return m ? (r ? `${mins} and ${secs}` : mins) : secs;
+  }
+  function tick() { $('clock').textContent = mmss(performance.now() - t0); }
+  function updateStats() { $('nAnswered').textContent = answered; $('nRight').textContent = right; }
+
+  function setStatus(mode, heard) {
+    const el = $('status');
+    if (mode === 'heard') { el.textContent = 'I heard: “' + heard + '”'; return; }
+    if (mode === 'listening') { el.innerHTML = '<span class="dot"></span>Listening… say the answer or type it'; return; }
+    if (mode === 'speaking') { el.textContent = '🔊 Listen…'; return; }
+    if (mode === 'type') { el.textContent = isTouch ? 'Tap the numbers, then ✓' : 'Type the answer, then press ✓ (or Enter)'; return; }
+    if (mode === 'tap') { el.textContent = 'Tap 🎤 and say the answer, or tap the numbers'; return; }
+    if (mode === 'lesson') {
+      if (voiceOn && recWanted) el.innerHTML = '<span class="dot"></span>Say “next” or press Got it when you\'re ready';
+      else el.textContent = 'Press Got it when you\'re ready';
+      return;
+    }
+    if (mode === null) return;
+    el.textContent = '';
+  }
+  function renderSlot() {
+    const slot = $('slot');
+    slot.textContent = typed;
+    slot.classList.toggle('empty', typed === '');
+  }
+  function setCard(kind) { $('card').className = 'card' + (kind ? ' ' + kind : ''); }
+  function setFeedback(text, kind) { const f = $('feedback'); f.textContent = text; f.className = 'feedback' + (kind ? ' ' + kind : ''); }
+
+  function startGame() {
+    session++;
+    ensureAudio();
+    talkOn = $('optTalk').checked && canSpeak;
+    voiceOn = $('optVoice').checked && canListen;
+    // iPhone: let the chimes play even with the silent switch on (only when the mic isn't needed)
+    try { if (navigator.audioSession) navigator.audioSession.type = voiceOn ? 'auto' : 'playback'; } catch (e) {}
+    try { localStorage.setItem('audioPracticePrefs', JSON.stringify({ talk: $('optTalk').checked, voice: $('optVoice').checked })); } catch (e) {}
+    $('voiceNote').textContent = '';
+    answered = 0; right = 0; times = []; facts = new Map();
+    deck = []; upcoming = []; lastFam = null; recEnds = [];
+    t0 = performance.now();
+    clearInterval(clockTimer); clockTimer = setInterval(tick, 250); tick();
+    updateStats();
+    hideLesson();
+    show('play');
+    setMic(false);
+    nextProblem();
+  }
+
+  function nextProblem() {
+    fillUpcoming();
+    cur = upcoming.shift();
+    lastFam = family(cur);
+    typed = ''; renderSlot();
+    $('pa').textContent = cur.a; $('pop').textContent = cur.sym; $('pb').textContent = cur.b;
+    setCard(''); setFeedback('', '');
+    hideLesson();
+    state = 'asking';
+    pauseListening();
+    askedAt = performance.now();
+    readyAt = talkOn ? null : askedAt;               // the answer clock starts once the problem has been read
+    setStatus(talkOn ? 'speaking' : (voiceOn ? 'listening' : 'type'));
+    speak(cur.words, () => {
+      if (state !== 'asking') return;
+      if (readyAt === null) readyAt = performance.now();
+      if (voiceOn) listen();
+      setStatus(voiceOn ? 'listening' : 'type');
+    }, 0);
+  }
+
+  function hearAgain() {
+    if (state === 'asking') {
+      pauseListening();
+      if (talkOn) setStatus('speaking');
+      speak(cur.words, () => {
+        if (state !== 'asking') return;
+        if (readyAt === null) readyAt = performance.now();
+        if (voiceOn) listen();
+        setStatus(voiceOn ? 'listening' : 'type');
+      }, 0);
+    } else if (state === 'lesson') {
+      pauseListening();
+      if (talkOn) setStatus('speaking');
+      speak(lessonSpeech, () => { if (state === 'lesson') { if (voiceOn) listen(); setStatus('lesson'); } }, 0);
+    }
+  }
+
+  function gotIt() {
+    if (state !== 'lesson') return;
+    state = 'feedback';
+    pauseListening();
+    if (canSpeak) speechSynthesis.cancel();
+    nextProblem();
+  }
+
+  function pickPraise() {
+    let i;
+    do { i = Math.floor(Math.random() * PRAISE.length); } while (PRAISE.length > 1 && i === lastPraise);
+    lastPraise = i;
+    return PRAISE[i];
+  }
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+  function submit(value) {
+    if (state !== 'asking' || value === null || Number.isNaN(value)) return;
+    const sec = (performance.now() - (readyAt === null ? askedAt : readyAt)) / 1000;
+    state = 'feedback';
+    pauseListening();
+    answered++;
+    times.push(sec);
+    const tok = session;
+    const goNext = () => setTimeout(() => { if (tok === session && state === 'feedback') nextProblem(); }, 200);
+
+    // Keep track of how each problem is going
+    const k = keyOf(cur);
+    let fact = facts.get(k);
+    if (!fact) { fact = { label: labelOf(cur), ans: cur.ans, tries: [], tricky: false, cleared: false }; facts.set(k, fact); }
+    const wasTricky = fact.tricky || !!saved[k];
+    const okTries = fact.tries.filter(x => x.ok);
+    const prevSec = okTries.length ? okTries[okTries.length - 1].sec : (saved[k] && saved[k].last) || null;
+    const ok = value === cur.ans;
+    fact.tries.push({ sec, ok });
+
+    if (ok) {
+      right++;
+      const fast = sec <= GOAL_SECONDS;
+      typed = String(value); renderSlot();
+      soundGood(); setCard('good');
+      let phrase = pickPraise(), note;
+      if (fast && wasTricky) {                       // a tricky one, now fast: it's off the tricky list
+        fact.tricky = true; fact.cleared = true;
+        delete saved[k]; persist();
+        phrase = pick(FASTER);
+        note = prevSec && prevSec > sec ? `⏱ ${f1(sec)} seconds, down from ${f1(prevSec)}! 🚀` : `⏱ ${f1(sec)} seconds. Fast this time! 🚀`;
+      } else if (fast) {
+        note = `⏱ ${f1(sec)} seconds`;
+      } else {                                       // right but slow: practice it again soon
+        fact.tricky = true; fact.cleared = false;
+        saved[k] = { label: fact.label, ans: fact.ans, last: +f1(sec) }; persist();
+        requeue(cur, RETRY_AFTER + 1);
+        note = `⏱ ${f1(sec)} seconds. This one will come back so you can get faster!`;
+      }
+      setFeedback('✓ ' + phrase, 'good');
+      $('status').textContent = note;
+      updateStats();
+      setTimeout(() => { if (tok === session) speak(phrase, goNext, fast ? 800 : 1800); }, 350);
+    } else {
+      fact.tricky = true; fact.cleared = false;
+      saved[k] = { label: fact.label, ans: fact.ans, last: null }; persist();
+      requeue(cur, RETRY_AFTER);                     // it comes back a few problems later
+      typed = String(cur.ans); renderSlot();         // show the right answer in the box
+      soundBad(); setCard('bad');
+      const tpl = pick(OOPS);
+      setFeedback(tpl.replace('{fact}', labelOf(cur)).replace('{ans}', cur.ans), 'bad');
+      $('status').textContent = 'You said ' + value + '. Let\'s see why…';
+      updateStats();
+      showLesson(cur, tpl.replace('{fact}', cur.words).replace('{ans}', cur.ans));
+      state = 'lesson';
+      setTimeout(() => {
+        if (tok !== session || state !== 'lesson') return;
+        speak(lessonSpeech, () => { if (state === 'lesson') { if (voiceOn) listen(); setStatus('lesson'); } }, 0);
+        if (!talkOn) setStatus('lesson');
+      }, 550);
+    }
+  }
+
+  function stopGame() {
+    if (state === 'idle' || state === 'done') return;
+    session++;
+    state = 'done';
+    pauseListening();
+    if (canSpeak) speechSynthesis.cancel();
+    clearInterval(clockTimer);
+    const ms = performance.now() - t0;
+
+    const pct = answered ? Math.round(100 * right / answered) : 0;
+    const avg = times.length ? times.reduce((a, b) => a + b, 0) / times.length : 0;
+    $('doneTitle').textContent = answered === 0 ? `See you next time, ${KID_NAME}!`
+      : pct >= 90 ? `Amazing work, ${KID_NAME}!` : `Great work, ${KID_NAME}!`;
+    $('doneLine').innerHTML = `You answered <b>${answered}</b> problem${answered === 1 ? '' : 's'} in <b>${longTime(ms)}</b>` +
+      (answered ? ` and got <b>${right}</b> right.` : '.');
+    $('tAnswered').textContent = answered;
+    $('tRight').textContent = answered ? `${right} (${pct}%)` : '0';
+    $('tTime').textContent = mmss(ms);
+    $('tAvg').textContent = times.length ? f1(avg) : '–';
+
+    const tricky = [...facts.values()].filter(f => f.tricky);
+    const cleared = tricky.filter(f => f.cleared).length;
+    $('trickyBox').hidden = tricky.length === 0;
+    $('trickySub').textContent = `Each try is shown in seconds (✗ = missed). Goal: ${GOAL_SECONDS} seconds or less.` +
+      (tricky.length > cleared ? ' The ones still to practice will come up extra next time.' : '');
+    $('trickyList').innerHTML = tricky.map(f =>
+      `<li class="${f.cleared ? 'cleared' : ''}"><span class="fact">${f.label} = ${f.ans}</span>` +
+      `<span class="tries">${f.tries.map(x => x.ok ? f1(x.sec) + 's' : '✗').join(' → ')}</span>` +
+      `<span class="mark">${f.cleared ? '✓ Got faster!' : 'Keep practicing'}</span></li>`).join('');
+    show('done');
+
+    if (answered) {
+      speak(`You answered ${answered} problem${answered === 1 ? '' : 's'} in ${longTime(ms)}, and got ${right} right. ` +
+            (cleared ? `You got faster on ${cleared} tricky ${cleared === 1 ? 'one' : 'ones'}! ` : '') +
+            (pct >= 90 ? `Amazing work, ${KID_NAME}!` : `Great job, ${KID_NAME}!`), null, 0);
+    }
+    showTrickyNote();
+  }
+
+  // ---------- Buttons and keys ----------
+  $('btnStart').onclick = startGame;
+  $('btnAgain').onclick = startGame;
+  $('btnStop').onclick = stopGame;
+  $('btnRepeat').onclick = hearAgain;
+  $('btnGotIt').onclick = gotIt;
+  $('btnMic').onclick = () => {
+    if (state !== 'asking' && state !== 'lesson') return;
+    ensureAudio();
+    if (state === 'asking') setStatus('listening');
+    listen(true);
+  };
+  function press(k) {
+    if (state !== 'asking') return;
+    if (k === 'ok') { if (typed !== '') submit(parseInt(typed, 10)); return; }
+    if (k === 'back') { typed = typed.slice(0, -1); renderSlot(); return; }
+    if (/^\d$/.test(k) && typed.length < 3) { typed = (typed === '0' ? '' : typed) + k; renderSlot(); }
+  }
+  $('pad').addEventListener('click', e => { const b = e.target.closest('button'); if (b) press(b.dataset.k); });
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (!$('start').hidden && e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); startGame(); return; }
+    if (state === 'lesson' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); gotIt(); return; }
+    if (e.key === 'Escape' && (state === 'asking' || state === 'lesson' || state === 'feedback')) { stopGame(); return; }
+    if (state !== 'asking') return;
+    if (/^\d$/.test(e.key)) { press(e.key); e.preventDefault(); }
+    else if (e.key === 'Backspace') { press('back'); e.preventDefault(); }
+    else if (e.key === 'Enter') { press('ok'); e.preventDefault(); }
+  });
+
+  // ---------- Start screen options ----------
+  try {
+    const p = JSON.parse(localStorage.getItem('audioPracticePrefs') || 'null');
+    if (p) { $('optTalk').checked = !!p.talk; $('optVoice').checked = !!p.voice; }
+  } catch (e) {}
+  if (!canSpeak) { $('optTalk').checked = false; $('optTalk').disabled = true; $('optTalk').parentElement.classList.add('off'); }
+  if (!canListen) {
+    $('optVoice').checked = false; $('optVoice').disabled = true; $('voiceToggle').classList.add('off');
+    $('startNote').textContent = 'This browser can’t listen for answers, so tap or type them instead. For voice answers, open this page in Chrome (or Safari on iPhone/iPad).';
+  } else if (isIOS) {
+    $('startNote').textContent = 'Voice answers need the internet. Allow the microphone when asked. If it doesn’t hear you, check that Dictation is on (Settings → General → Keyboard), and turn off silent mode to hear the sounds.';
+  } else if (isTouch) {
+    $('startNote').textContent = 'Voice answers need the internet. Allow the microphone when asked, then tap 🎤 whenever you want to say an answer.';
+  } else {
+    $('startNote').textContent = 'Voice answers need the internet. The first time, the browser asks to use the microphone — click Allow.';
+  }
+  showTrickyNote();
+
+  window.MathPractice = { parseSpoken };             // handy for testing
+})();
+</script>
+</body>
+</html>

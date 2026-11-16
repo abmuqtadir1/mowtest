@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multiply &amp; Divide</title>
+<style>
+  :root {
+    --ink: #1f2a37;
+    --muted: #6b7686;
+    --band: #edf3fb;
+    --box: #7b889c;
+    --key: #d63b3b;
+  }
+
+  /* Paper size, page height and margins are set by the script (see PAPER setting). */
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: #e6e8ed; }
+  body {
+    font-family: "Segoe UI", Arial, "Liberation Sans", Helvetica, sans-serif;
+    color: var(--ink);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ---------- On-screen toolbar (never printed) ---------- */
+  .toolbar {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center;
+    padding: 10px 12px; background: #fff; border-bottom: 1px solid #d5d9e0;
+  }
+  .toolbar button {
+    font-family: inherit; font-size: 15px; font-weight: 600;
+    padding: 9px 16px; border-radius: 8px; border: 1px solid #c4cad4;
+    background: #f7f8fa; color: var(--ink); cursor: pointer;
+  }
+  .toolbar button:hover { background: #eef1f5; }
+  .toolbar button.primary { background: #2f6fd6; border-color: #2f6fd6; color: #fff; }
+  .toolbar button.primary:hover { background: #285fb8; }
+  .toolbar .tip { font-size: 13px; color: var(--muted); max-width: 560px; text-align: center; }
+
+  /* ---------- The paper ---------- */
+  .page {
+    width: 8.5in; margin: 20px auto; background: #fff;
+    box-shadow: 0 2px 14px rgba(0,0,0,.15);
+  }
+  .page:last-child { margin-bottom: 40px; }
+  .sheet { width: 7.9in; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Header */
+  .title-row { display: flex; align-items: center; justify-content: space-between; gap: 0.2in; }
+  h1 { font-size: 21pt; font-weight: 700; letter-spacing: .2px; display: flex; align-items: center; gap: 0.12in; white-space: nowrap; }
+  h1 small { font-size: 14pt; font-weight: 600; color: var(--muted); }
+  .star { width: 0.3in; height: 0.3in; flex: none; }
+  .key-tag {
+    display: none; font-size: 10pt; font-weight: 700; color: #fff; background: var(--key);
+    padding: 3px 9px; border-radius: 20px; letter-spacing: .5px; text-transform: uppercase;
+  }
+  body.answers .key-tag { display: inline-block; }
+  .tables { display: flex; align-items: center; gap: 6px; font-size: 11pt; color: var(--muted); font-weight: 600; white-space: nowrap; }
+  .chip {
+    min-width: 0.3in; height: 0.3in; padding: 0 6px; border-radius: 0.15in;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 12pt; font-weight: 700;
+  }
+
+  .cheer {
+    display: flex; align-items: baseline; margin-top: 0.1in;
+    font-size: 14pt; font-weight: 600; white-space: nowrap;
+  }
+  .cheer .kid { font-size: 21pt; font-weight: 800; letter-spacing: 1px; }
+  .cheer .msg { margin-left: 0.08in; }
+  .cheer .mini-star { width: 0.2in; height: 0.2in; margin-left: 0.08in; align-self: center; }
+
+  /* Problems */
+  .grid { flex: 1; display: flex; flex-direction: column; gap: 0.1in; margin-top: 0.16in; }
+  .block { flex: 1; display: flex; flex-direction: column; }
+  .row { flex: 1; display: grid; align-items: center; border-radius: 7px; padding: 0 0.03in; }
+  .row:nth-child(odd) { background: var(--band); }
+
+  .prob {
+    display: grid;
+    grid-template-columns: var(--c1, 1.2em) 0.85em var(--c3, 1.2em) 0.85em 1fr;
+    align-items: center;
+    padding: 0 0.08in 0 0.02in;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .n  { text-align: right; }
+  .op { text-align: center; color: #4f5a6b; font-weight: 600; }
+  .ans {
+    height: 0.4in; margin-left: 0.02in;
+    border: 1.5px solid var(--box); border-radius: 6px; background: #fff;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ans span { display: none; color: var(--key); font-weight: 700; }
+  body.answers .ans span { display: inline; }
+
+  .foot {
+    display: flex; justify-content: space-between; margin-top: 0.08in;
+    font-size: 9pt; color: var(--muted);
+  }
+  .foot .turn { font-weight: 700; color: var(--ink); font-size: 10pt; }
+
+  @media print {
+    html, body { background: #fff; }
+    .toolbar { display: none; }
+    .page { width: auto; height: auto !important; padding: 0 !important; margin: 0; box-shadow: none; break-after: page; }
+    .page:last-child { break-after: auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <button class="primary" id="btnNew">New problems</button>
+  <button id="btnKey">Show answers</button>
+  <button id="btnPrint">Print</button>
+  <span class="tip" id="tip"></span>
+</div>
+
+<div id="pages"></div>
+
+<script>
+(function () {
+  // ================= Settings — change these any time =================
+  const TITLE = 'Multiply & Divide';     // title at the top of each page
+  const OPS = 'mix';                    // 'mul' = ×,  'div' = ÷,  'mix' = about half of each
+  const TABLES_LABEL = 'Tables:';          // label in front of the colored number badges
+  const DEFAULT_TABLES = [2, 3, 5, 10];  // tables to practice (× and ÷ mixed together)
+  const CHEERS = [                      // one is picked for each new sheet (shown after the name)
+    "you're one smart cookie — these problems don't stand a chance!",
+    "your brain is a math machine — let's make it zoom!",
+    "you're a times-and-divide superstar in the making!",
+    "you've got a genius brain and a can-do heart — go get 'em!",
+    "every answer you write makes your brain even stronger!",
+    "you're so smart, these problems should be nervous!",
+    "time to show these numbers who's the boss — it's you!",
+    "your clever brain is warmed up — let's go, math champ!",
+    "you make math look easy — keep shining, smarty-pants!",
+    "you're brilliant, brave, and ready to rock this page!",
+    "one problem at a time, you'll ace every single one!",
+    "your smart brain + a sharp pencil = unstoppable!",
+    "math wizard on duty — these problems are no match for you!",
+    "you're as smart as you are sweet — let's multiply and divide!",
+    "believe in your amazing brain — you've totally got this!",
+    "you're a smart cookie with extra sprinkles on top!",
+    "big brain, big heart, big smile — let's do this!",
+    "you're getting smarter with every single problem!",
+    "high five, smarty — this page is yours to conquer!",
+    "you shine brighter than a gold star — show 'em what you've got!",
+    "times or divide, your smart brain can do both — let's go!",
+  ];
+  // Name at the top of the front page. It's set on the worksheet list page and saved only on this device.
+  let KID_NAME = 'Superstar';
+  try { KID_NAME = (localStorage.getItem('worksheetKidName') || '').trim().slice(0, 20) || KID_NAME; } catch (e) {}
+  const PAPER = 'legal';                // 'legal' (8.5 × 14 in) or 'letter' (8.5 × 11 in)
+  const SIDES = 2;                      // 2 = front and back (print two-sided), 1 = single page
+  const MIN = 2, MAX = 12;              // each table runs 2 … 12 (e.g. 3×2 … 3×12)
+  const COLS = 6;                       // problems per row
+  const ROWS = PAPER === 'legal' ? 20 : 16;   // rows per side (legal: 6 × 20 = 120 per side)
+  const GROUP = 4;                      // rows per block (a small gap separates blocks)
+  // ====================================================================
+  // Optional URL overrides:  ?tables=4,6,7   (practice other tables)
+  //                          ?sheet=12345    (rebuild a specific sheet, e.g. for its answer key)
+
+  // ---- Paper size ----
+  const PAGE_H = PAPER === 'legal' ? 14 : 11;
+  const MARGIN = 0.3;
+  const css = document.createElement('style');
+  css.textContent =
+    `@page { size: ${PAPER} portrait; margin: ${MARGIN}in; }
+     .page { height: ${PAGE_H}in; padding: ${MARGIN}in; }
+     .sheet { height: ${PAGE_H - 2 * MARGIN}in; }
+     @media print { .sheet { height: ${(PAGE_H - 2 * MARGIN - 0.02).toFixed(2)}in; } }`;
+  document.head.appendChild(css);
+
+  // ---- Options from the URL ----
+  const params = new URLSearchParams(location.search);
+  let tables = DEFAULT_TABLES;
+  if (params.get('tables')) {
+    const t = params.get('tables').split(',').map(s => parseInt(s, 10))
+      .filter(n => Number.isFinite(n) && n > 0 && n < 100);
+    if (t.length) tables = t;
+  }
+  let seed = parseInt(params.get('sheet'), 10);
+  if (!Number.isFinite(seed)) seed = 10000 + Math.floor(Math.random() * 90000);
+
+  // Small seeded random generator so a sheet number always gives the same problems
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  const rand = mulberry32(seed);
+  const shuffle = arr => {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+
+  // ---- Make the problems ----
+  // A "card" is a fact [table, n] plus an operation:
+  //   × : table × n  (shown either way round, e.g. 3 × 7 or 7 × 3)
+  //   ÷ : (table × n) ÷ table = n   (e.g. 21 ÷ 3)
+  // Cards are dealt from a shuffled deck so every fact (and, on mixed sheets,
+  // every × and ÷) shows up evenly. The same fact family never sits right
+  // next to or right above itself, so one problem can't give away the next.
+  const family = c => { const [t, n] = c.f; return Math.min(t, n) + 'x' + Math.max(t, n); };
+  const makeDeck = () => {
+    const d = [];
+    for (const t of tables) for (let n = MIN; n <= MAX; n++) {
+      if (OPS !== 'div') d.push({ f: [t, n], op: 'mul' });
+      if (OPS !== 'mul') d.push({ f: [t, n], op: 'div' });
+    }
+    return shuffle(d);
+  };
+
+  const perSide = COLS * ROWS;
+  const total = perSide * SIDES;
+  const problems = [];
+  const fams = [];
+  let deck = [];
+  while (problems.length < total) {
+    if (!deck.length) deck = makeDeck();
+    const k = problems.length;
+    const left = k % COLS ? fams[k - 1] : null;
+    const above = k >= COLS ? fams[k - COLS] : null;
+    const ok = c => family(c) !== left && family(c) !== above;
+    let i = deck.findIndex(ok);
+    if (i < 0) { deck = deck.concat(makeDeck()); i = deck.findIndex(ok); if (i < 0) i = 0; }
+    const c = deck.splice(i, 1)[0];
+    const [t, n] = c.f;
+    if (c.op === 'mul') {
+      const swap = rand() < 0.5;
+      problems.push({ a: swap ? n : t, sym: '×', b: swap ? t : n, ans: t * n });
+    } else {
+      problems.push({ a: t * n, sym: '÷', b: t, ans: n });
+    }
+    fams.push(family(c));
+  }
+
+  // ---- Pick this sheet's cheer (never the same as the last sheet) ----
+  const storeKey = 'worksheetLastCheer-' + OPS;
+  let cheerIdx = Math.floor(rand() * CHEERS.length);
+  try {
+    const last = parseInt(localStorage.getItem(storeKey), 10);
+    if (!params.get('sheet') && CHEERS.length > 1 && cheerIdx === last) cheerIdx = (cheerIdx + 1) % CHEERS.length;
+    localStorage.setItem(storeKey, String(cheerIdx));
+  } catch (e) { /* storage unavailable — repeats just become possible */ }
+  const CHEER = CHEERS[cheerIdx];
+
+  // ---- Sizing: room for 3-digit numbers (like 120 ÷ 10) while keeping a good answer box ----
+  const digits = key => Math.max(...problems.map(p => String(p[key]).length));
+  const slot = d => +(d * 0.58 + 0.04).toFixed(2);           // 2 digits → 1.2em, 3 digits → 1.78em
+  const c1 = slot(digits('a')), c3 = slot(digits('b'));
+  const exprEm = c1 + 0.85 + c3 + 0.85;
+  const cellIn = 7.84 / COLS;
+  const roomPt = (cellIn - 0.12 - 0.37) * 72;                 // leave at least ~0.37in for the answer box
+  let fontPt = COLS <= 6 ? 13 : COLS === 7 ? 11.5 : 10;
+  fontPt = Math.min(fontPt, Math.floor(roomPt / exprEm * 2) / 2);
+
+  // ---- Build the pages ----
+  const colors = ['#3b7be0', '#1f9d55', '#ee8a0f', '#8b5cf6', '#e0457b', '#0e9aa7'];
+  const chips = TABLES_LABEL + tables.map((t, i) =>
+    `<span class="chip" style="background:${colors[i % colors.length]}">${t}</span>`).join('');
+  const star = '<svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path fill="#f5b301" stroke="#d99a00" stroke-width="1" stroke-linejoin="round" d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg>';
+
+  let out = '';
+  for (let s = 0; s < SIDES; s++) {
+    const first = s === 0, last = s === SIDES - 1;
+    const title = first ? TITLE : `${TITLE} <small>Side ${s + 1} · keep going!</small>`;
+
+    let html = `<div class="page"><div class="sheet"><header>
+      <div class="title-row">
+        <h1>${star}${title}<span class="key-tag">Answer key</span></h1>
+        <div class="tables">${chips}</div>
+      </div>`;
+    if (first) {
+      const kid = [...KID_NAME].map((ch, i) =>
+        `<span style="color:${colors[i % colors.length]}">${ch.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))}</span>`).join('');
+      html += `<div class="cheer"><span class="kid">${kid}</span>,` +
+        `<span class="msg">${CHEER}</span>${star.replace('class="star"', 'class="mini-star"')}</div>`;
+    }
+    html += `</header><main class="grid" style="--c1:${c1}em;--c3:${c3}em">`;
+
+    for (let r = 0; r < ROWS; r++) {
+      if (r % GROUP === 0) html += (r ? '</div>' : '') + '<div class="block">';
+      html += `<div class="row" style="grid-template-columns:repeat(${COLS},1fr)">`;
+      for (let c = 0; c < COLS; c++) {
+        const p = problems[s * perSide + r * COLS + c];
+        html += `<div class="prob" style="font-size:${fontPt}pt">` +
+          `<span class="n">${p.a}</span><span class="op">${p.sym}</span><span class="n">${p.b}</span>` +
+          `<span class="op">=</span><span class="ans"><span>${p.ans}</span></span></div>`;
+      }
+      html += '</div>';
+    }
+    html += '</div></main>';
+
+    const sideLabel = SIDES > 1 ? ` · Side ${s + 1} of ${SIDES}` : '';
+    html += `<div class="foot"><span>Sheet #${seed}${sideLabel}</span>` +
+      (last ? '<span>Check your work when you finish!</span>'
+            : '<span class="turn">Turn the page over &rarr;</span>') +
+      '</div></div></div>';
+    out += html;
+  }
+  document.getElementById('pages').innerHTML = out;
+
+  // Keep the cheer on one line: shrink it a little if a long one would overflow
+  document.querySelectorAll('.cheer').forEach(el => {
+    let size = 14;
+    while (el.scrollWidth > el.clientWidth + 1 && size > 10) { size -= 0.5; el.style.fontSize = size + 'pt'; }
+  });
+
+  document.title = TITLE + ' – ' + tables.join(', ') + ' (Sheet #' + seed + ')';
+  const paperName = PAPER === 'legal' ? 'Legal' : 'Letter';
+  document.getElementById('tip').textContent = SIDES > 1
+    ? `Printing: Paper size “${paperName}”, “Print on both sides” on (flip on long edge), Margins “Default”, “Headers and footers” off.`
+    : `Printing: Paper size “${paperName}”, Margins “Default”, “Headers and footers” off.`;
+
+  // ---- Toolbar ----
+  document.getElementById('btnNew').onclick = () => {
+    const q = params.get('tables') ? '?tables=' + encodeURIComponent(params.get('tables')) : '';
+    location.href = location.pathname + q;
+  };
+  const btnKey = document.getElementById('btnKey');
+  btnKey.onclick = () => {
+    const on = document.body.classList.toggle('answers');
+    btnKey.textContent = on ? 'Hide answers' : 'Show answers';
+  };
+  document.getElementById('btnPrint').onclick = () => window.print();
+})();
+</script>
+</body>
+</html>

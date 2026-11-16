@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Math Worksheets</title>
+<style>
+  :root { --ink: #1f2a37; --muted: #6b7686; --bg: #f2f5fa; --line: #dde2ea; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Arial, "Liberation Sans", Helvetica, sans-serif; color: var(--ink); background: var(--bg); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+  header { background: #fff; border-bottom: 1px solid var(--line); padding: 28px 0 24px; }
+  h1 { font-size: 34px; font-weight: 800; display: flex; align-items: center; gap: 12px; }
+  h1 svg { width: 36px; height: 36px; flex: none; }
+  header p { margin-top: 8px; font-size: 17px; color: #4a5566; }
+  .namebox { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin-top: 16px; font-size: 15px; font-weight: 600; color: #3b4656; }
+  .namebox input {
+    font: inherit; font-size: 17px; font-weight: 700; color: var(--ink); width: 12em; max-width: 100%;
+    padding: 7px 12px; border: 1.5px solid #c4cad4; border-radius: 10px; background: #fff;
+  }
+  .namebox input:focus { outline: none; border-color: #3b7be0; box-shadow: 0 0 0 3px rgba(59,123,224,.15); }
+  .namebox .saved { color: #1f9d55; font-size: 14px; }
+  .namebox .hint { flex-basis: 100%; font-size: 13px; font-weight: 500; color: var(--muted); }
+  section { margin: 30px 0 10px; }
+  h2 { font-size: 21px; font-weight: 800; }
+  h2 small { font-size: 14px; font-weight: 600; color: var(--muted); margin-left: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-top: 14px; }
+  .card {
+    display: flex; gap: 14px; align-items: flex-start; padding: 18px; background: #fff;
+    border: 1px solid var(--line); border-radius: 16px; color: inherit; text-decoration: none;
+    transition: transform .12s, box-shadow .12s, border-color .12s;
+  }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(31,42,55,.08); border-color: #c9d2de; }
+  .icon {
+    width: 52px; height: 52px; border-radius: 14px; flex: none; color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800;
+  }
+  .body { flex: 1; min-width: 0; }
+  .title { font-size: 18px; font-weight: 800; }
+  .desc { font-size: 14px; color: #4a5566; margin-top: 4px; line-height: 1.4; }
+  .chips { display: flex; align-items: center; gap: 5px; margin-top: 10px; font-size: 13px; color: var(--muted); font-weight: 600; }
+  .chip {
+    min-width: 24px; height: 24px; padding: 0 5px; border-radius: 12px;
+    display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 700;
+  }
+  .feature { border: 2px solid #c9b8f7; background: linear-gradient(135deg, #fff 60%, #f4efff); }
+  footer { margin: 34px 0 30px; font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#f5b301" stroke="#d99a00" stroke-width="1" stroke-linejoin="round" d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg>
+      Math Worksheets
+    </h1>
+    <p>Pick one to practice. Every worksheet makes brand-new problems each time you open it.</p>
+    <div class="namebox">
+      <label for="kidName">Name on the worksheets:</label>
+      <input id="kidName" maxlength="20" autocomplete="off" spellcheck="false" placeholder="Superstar">
+      <span class="saved" id="nameSaved"></span>
+      <span class="hint">Saved only on this device. Leave it empty to use “Superstar”.</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" id="list"></main>
+
+<footer class="wrap">Printable sheets: Legal paper, print on both sides. Use “Show answers” on any sheet to print its answer key.</footer>
+
+<script>
+  // ============ The list — add a line here for each new worksheet ============
+  const WORKSHEETS = [
+    { section: 'Practice out loud', items: [
+      { file: 'audio-practice.html', title: 'Audio Practice: Multiply & Divide', feature: true,
+        desc: 'One problem at a time. Hear it, say or type the answer, and see how many you can do.',
+        icon: '🎧', color: '#8b5cf6', label: 'Tables:', tables: [2, 3, 5, 10] },
+    ]},
+    { section: 'Printable worksheets', note: 'Legal size · two-sided · 240 problems', items: [
+      { file: 'multiplication-worksheet.html', title: 'Multiplication',
+        desc: 'Times tables for 2, 3, 5 and 10, from ×2 up to ×12.',
+        icon: '×', color: '#3b7be0', label: 'Tables:', tables: [2, 3, 5, 10] },
+      { file: 'multiplication-3-and-5.html', title: 'Multiplication: 3s & 5s',
+        desc: 'Just the 3 and 5 times tables, from ×2 up to ×12.',
+        icon: '×', color: '#1f9d55', label: 'Tables:', tables: [3, 5] },
+      { file: 'division-2-3-5-10.html', title: 'Division',
+        desc: 'Dividing by 2, 3, 5 and 10. Every answer is from 2 to 12.',
+        icon: '÷', color: '#ee8a0f', label: 'Divide by:', tables: [2, 3, 5, 10] },
+      { file: 'mixed-multiply-divide-2-3-5-10.html', title: 'Multiply & Divide',
+        desc: 'Times and division problems mixed together.',
+        icon: '×÷', color: '#e0457b', label: 'Tables:', tables: [2, 3, 5, 10] },
+    ]},
+  ];
+  // ===========================================================================
+
+  // Name for the worksheets: kept in this browser only (never in the files)
+  const nameInput = document.getElementById('kidName');
+  try { nameInput.value = localStorage.getItem('worksheetKidName') || ''; } catch (e) {}
+  let savedTimer = null;
+  nameInput.addEventListener('input', () => {
+    const v = nameInput.value.trim().slice(0, 20);
+    try { if (v) localStorage.setItem('worksheetKidName', v); else localStorage.removeItem('worksheetKidName'); } catch (e) {}
+    const msg = document.getElementById('nameSaved');
+    msg.textContent = 'Saved ✓';
+    clearTimeout(savedTimer); savedTimer = setTimeout(() => { msg.textContent = ''; }, 1500);
+  });
+
+  const chipColors = ['#3b7be0', '#1f9d55', '#ee8a0f', '#8b5cf6', '#e0457b', '#0e9aa7'];
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  document.getElementById('list').innerHTML = WORKSHEETS.map(sec => `
+    <section>
+      <h2>${esc(sec.section)}${sec.note ? `<small>${esc(sec.note)}</small>` : ''}</h2>
+      <div class="grid">
+        ${sec.items.map(w => `
+          <a class="card${w.feature ? ' feature' : ''}" href="${esc(w.file)}">
+            <div class="icon" style="background:${w.color}${w.icon.length > 1 && !/\p{Emoji_Presentation}/u.test(w.icon) ? ';font-size:20px' : ''}">${esc(w.icon)}</div>
+            <div class="body">
+              <div class="title">${esc(w.title)}</div>
+              <div class="desc">${esc(w.desc)}</div>
+              <div class="chips">${esc(w.label)}${w.tables.map((t, i) =>
+                `<span class="chip" style="background:${chipColors[i % chipColors.length]}">${t}</span>`).join('')}</div>
+            </div>
+          </a>`).join('')}
+      </div>
+    </section>`).join('');
+</script>
+</body>
+</html>
