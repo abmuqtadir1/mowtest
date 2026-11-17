@@ -480,6 +480,133 @@
   html.theme-dance .hdr-cat.small { width: 0.5in; }
   `;
 
+  // ---------------- Cars (original drawings, side view, facing right) ----------------
+  // Wheels sit on the top edge of the problem card. Happy = speed lines; surprised = a puff of smoke and "!".
+  function vehicleArt(body, wheels, top) {
+    const wheel = ([x, r]) => {
+      const cy = 80 - r;
+      return `<g class="wheel"><circle cx="${x}" cy="${cy}" r="${r}" fill="#2b2f36"/>` +
+        (r >= 14 ? `<circle cx="${x}" cy="${cy}" r="${r - 1.5}" fill="none" stroke="#555c66" stroke-width="3" stroke-dasharray="4 3"/>` : '') +
+        `<circle cx="${x}" cy="${cy}" r="${r * 0.45}" fill="#c9d1db"/>` +
+        `<path d="M${x - r * 0.42} ${cy} h${r * 0.84} M${x} ${cy - r * 0.42} v${r * 0.84}" stroke="#7d8796" stroke-width="1.5"/></g>`;
+    };
+    const parts = body + wheels.map(wheel).join('');
+    const happy = `<g class="e-happy"><path d="M4 44 h20 M0 56 h22 M8 68 h14" stroke="#9fb3c8" stroke-width="3.2" fill="none"/></g>`;
+    const wow = `<g class="e-wow"><circle cx="18" cy="71" r="7" fill="#cfd6df"/><circle cx="9" cy="64" r="5" fill="#dfe4ea"/><circle cx="4" cy="73" r="4" fill="#e7ebf0"/>
+      <circle cx="160" cy="14" r="9" fill="#fff" stroke="#e63946" stroke-width="2"/><path d="M160 9 v6" stroke="#e63946" stroke-width="2.6"/><circle cx="160" cy="19" r="1.5" fill="#e63946"/></g>`;
+    return {
+      peek: `<svg viewBox="0 0 180 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g stroke-linecap="round" stroke-linejoin="round">${happy}${wow}${parts}</g></svg>`,
+      sit: `<svg viewBox="20 ${top} 154 ${84 - top}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g stroke-linecap="round" stroke-linejoin="round">${parts}</g></svg>`,
+    };
+  }
+  const WIN = '#cfe8ff';
+  const raceCar = vehicleArt(`
+    <path d="M28 56 L28 44 L46 44 L46 52" fill="#2f6fe0" stroke="#1d4596" stroke-width="2.4"/>
+    <path d="M28 70 L30 60 Q32 54 40 53 L66 50 L82 38 Q85 36 90 36 L112 36 Q118 36 122 41 L130 50 L156 53 Q170 55 170 64 L170 70 Z" fill="#2f6fe0" stroke="#1d4596" stroke-width="2.4"/>
+    <path d="M89 41 L111 41 L119 50 L83 50 Z" fill="${WIN}" stroke="#1d4596" stroke-width="1.8"/>
+    <path d="M34 61 H166" stroke="#fff" stroke-width="4"/>
+    <circle cx="100" cy="61" r="7.5" fill="#fff" stroke="#1d4596" stroke-width="1.6"/>
+    <path d="M100 56.3 l1.5 3 3.3 .5 -2.4 2.3 .6 3.3 -3 -1.6 -3 1.6 .6 -3.3 -2.4 -2.3 3.3 -.5 z" fill="#f5b301"/>
+    <circle cx="166" cy="59" r="2.6" fill="#ffe27a"/>`, [[56, 10], [142, 10]], 30);
+  const fireTruck = vehicleArt(`
+    <path d="M30 30 H122 M30 36 H122 M40 30 v6 M52 30 v6 M64 30 v6 M76 30 v6 M88 30 v6 M100 30 v6 M112 30 v6" stroke="#aab4c0" stroke-width="2.6"/>
+    <path d="M42 36 v4 M112 36 v4" stroke="#9b1d20" stroke-width="2.4"/>
+    <rect x="26" y="40" width="104" height="30" rx="3" fill="#e5383b" stroke="#9b1d20" stroke-width="2.4"/>
+    <path d="M130 70 V46 H150 Q154 46 157 49 L168 60 V70 Z" fill="#e5383b" stroke="#9b1d20" stroke-width="2.4"/>
+    <path d="M136 50 H149 L158 59 H136 Z" fill="${WIN}" stroke="#9b1d20" stroke-width="1.8"/>
+    <rect x="137" y="40" width="12" height="6" rx="2.5" fill="#3b7be0" stroke="#1d4596" stroke-width="1.2"/>
+    <rect x="34" y="45" width="20" height="11" rx="2" fill="#c92f32"/><rect x="60" y="45" width="20" height="11" rx="2" fill="#c92f32"/><rect x="98" y="45" width="24" height="11" rx="2" fill="#c92f32"/>
+    <path d="M26 61 H168" stroke="#fff" stroke-width="3"/>
+    <circle cx="166" cy="65" r="2.4" fill="#ffe27a"/>`, [[48, 10], [86, 10], [148, 10]], 24);
+  const schoolBus = vehicleArt(`
+    <path d="M24 70 V36 Q24 30 30 30 H146 Q156 30 160 38 L166 52 Q168 56 168 60 V70 Z" fill="#f6c026" stroke="#b07d00" stroke-width="2.4"/>
+    <g fill="${WIN}" stroke="#b07d00" stroke-width="1.6"><rect x="31" y="36" width="16" height="13" rx="2"/><rect x="51" y="36" width="16" height="13" rx="2"/>
+    <rect x="71" y="36" width="16" height="13" rx="2"/><rect x="91" y="36" width="16" height="13" rx="2"/><rect x="111" y="36" width="16" height="13" rx="2"/></g>
+    <path d="M134 36 H148 Q153 36 156 42 L160 50 H134 Z" fill="${WIN}" stroke="#b07d00" stroke-width="1.6"/>
+    <path d="M24 56 H168 M24 62 H168" stroke="#2b2f36" stroke-width="2"/>
+    <circle cx="164" cy="65" r="2.4" fill="#fff4b8"/>`, [[50, 10], [142, 10]], 24);
+  const monsterTruck = vehicleArt(`
+    <path d="M42 44 L52 64 M62 44 L52 64 M122 44 L132 64 M142 44 L132 64" stroke="#7d8796" stroke-width="3.4"/>
+    <g transform="translate(0 -12)"><path d="M36 58 L36 51 L64 46 L84 30 Q87 28 92 28 L116 28 Q122 28 126 33 L134 44 L156 47 Q166 49 166 55 L164 58 Z" fill="#8b5cf6" stroke="#5b3db0" stroke-width="2.4"/>
+    <path d="M90 33 H115 L124 44 H84 Z" fill="${WIN}" stroke="#5b3db0" stroke-width="1.8"/>
+    <path d="M42 54 q8 -8 14 -2 q4 -8 11 -4 q6 -6 13 0" fill="none" stroke="#ff9f1c" stroke-width="2.6"/>
+    <circle cx="163" cy="52" r="2.4" fill="#ffe27a"/></g>`, [[52, 16], [132, 16]], 10);
+  const iceCreamTruck = vehicleArt(`
+    <path d="M69 19 L83 19 L76 32 Z" fill="#e8b273" stroke="#a8743a" stroke-width="1.6"/>
+    <circle cx="76" cy="14" r="7.5" fill="#ff9fc4" stroke="#c2547d" stroke-width="1.6"/>
+    <path d="M73 11 l2 1 M78 10 l1 2 M79 15 l-2 1" stroke="#fff" stroke-width="1.4"/>
+    <rect x="24" y="32" width="100" height="38" rx="4" fill="#fff" stroke="#c2547d" stroke-width="2.4"/>
+    <path d="M124 70 V44 H144 Q148 44 151 47 L166 60 V70 Z" fill="#ff7aa8" stroke="#c2547d" stroke-width="2.4"/>
+    <path d="M130 48 H143 L153 58 H130 Z" fill="${WIN}" stroke="#c2547d" stroke-width="1.8"/>
+    <rect x="44" y="41" width="44" height="17" rx="2" fill="${WIN}" stroke="#c2547d" stroke-width="1.8"/>
+    <path d="M40 41 h52 l-4 -5 h-44 z" fill="#ff7aa8" stroke="#c2547d" stroke-width="1.6"/>
+    <path d="M24 63 H166" stroke="#ff7aa8" stroke-width="4"/>
+    <circle cx="164" cy="66" r="2.4" fill="#ffe27a"/>`, [[48, 10], [144, 10]], 2);
+  const carIcon = (cls = '') => `<svg ${cls ? `class="${cls}" ` : ''}viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M2 16 L3 12.5 Q3.5 11 5 11 L8 10.5 L10.5 7 Q11 6.5 12 6.5 H16 Q17 6.5 17.6 7.4 L19 10.5 L21 11 Q23 11.5 23 13.5 V16 Z" fill="#e63946" stroke="#a51d29" stroke-width="1"/>
+    <path d="M11.4 8 H15.6 L16.8 10.5 H10 Z" fill="${WIN}"/><circle cx="7" cy="16.5" r="2.6" fill="#2b2f36"/><circle cx="18" cy="16.5" r="2.6" fill="#2b2f36"/>
+    <circle cx="7" cy="16.5" r="1.1" fill="#c9d1db"/><circle cx="18" cy="16.5" r="1.1" fill="#c9d1db"/></svg>`;
+  const tirePath = `<circle cx="12" cy="12" r="10" fill="#2b2f36"/><circle cx="12" cy="12" r="4.6" fill="#c9d1db"/>`;
+  const conePath = `<path d="M9 3 h6 l5 17 H4 Z" fill="#ff8a1c"/><path d="M7.2 9 h9.6 l1.2 4 H6 Z" fill="#fff"/><rect x="2" y="19" width="20" height="3" rx="1" fill="#e06f0a"/>`;
+  const vroom = (ctx, base, vol) => voice(ctx, [[0, base, base * 2.6, 0.55, vol]], { type: 'sawtooth', bp: [500, 1400], q: 0.8, lfo: [28, 0.35] });
+  const sputter = ctx => voice(ctx, [[0, 120, 90, 0.08, 0.6], [0.14, 110, 80, 0.08, 0.6], [0.3, 95, 60, 0.25, 0.55]], { type: 'square', bp: [520, 300], q: 1.5 });
+  const horn = (ctx, notes) => { voice(ctx, notes, { type: 'square', bp: [700, 700], q: 1 }); voice(ctx, notes.map(n => [n[0], n[1] * 1.19, n[2] * 1.19, n[3], n[4]]), { type: 'square', bp: [700, 700], q: 1 }); };
+  const carCast = [
+    { label: 'the race car', sit: raceCar.sit, peek: raceCar.peek,
+      sounds: { good: ctx => vroom(ctx, 110, 0.5), bad: sputter },
+      praiseNamed: ['Zoom zoom, {name}!', 'You\'re in the fast lane, {name}!', 'First place, {name}!', 'Turbo-tastic, {name}!', 'Checkered flag, {name}! You won!'],
+      praise: ['Zoom zoom!', 'First place!', 'Turbo-tastic!'] },
+    { label: 'the fire truck', sit: fireTruck.sit, peek: fireTruck.peek,
+      sounds: { good: ctx => voice(ctx, [[0, 700, 950, 0.22, 0.4], [0.22, 950, 700, 0.22, 0.4], [0.44, 700, 950, 0.22, 0.4]], { type: 'sine', attack: 0.02 }), bad: sputter },
+      praiseNamed: ['Red-hot answer, {name}!', 'Siren-sational, {name}!', 'You\'re a math hero, {name}!', 'Wee-oo! Great job, {name}!', 'You put out that problem, {name}!'],
+      praise: ['Siren-sational!', 'Red-hot!', 'Wee-oo wee-oo!'] },
+    { label: 'the school bus', sit: schoolBus.sit, peek: schoolBus.peek,
+      sounds: { good: ctx => horn(ctx, [[0, 311, 311, 0.14, 0.33], [0.2, 311, 311, 0.2, 0.33]]), bad: sputter },
+      praiseNamed: ['Honk honk, hooray, {name}!', 'Top of the class, {name}!', 'All aboard the smart bus, {name}!', 'You\'re on the right route, {name}!', 'The wheels on the bus say yes, {name}!'],
+      praise: ['Honk honk!', 'Top of the class!', 'All aboard!'] },
+    { label: 'the monster truck', sit: monsterTruck.sit, peek: monsterTruck.peek,
+      sounds: { good: ctx => voice(ctx, [[0, 55, 140, 0.7, 0.4]], { type: 'sawtooth', bp: [300, 900], q: 0.8, lfo: [22, 0.45] }), bad: sputter },
+      praiseNamed: ['Monster-ific, {name}!', 'You crushed it, {name}!', 'Big wheels, big brain, {name}!', 'Mega-tastic, {name}!', 'Rumble rumble, right answer, {name}!'],
+      praise: ['You crushed it!', 'Monster-ific!', 'Mega-tastic!'] },
+    { label: 'the ice cream truck', sit: iceCreamTruck.sit, peek: iceCreamTruck.peek,
+      sounds: { good: ctx => voice(ctx, [[0, 1047, 1047, 0.12, 0.4], [0.13, 1319, 1319, 0.12, 0.4], [0.26, 1568, 1568, 0.12, 0.4], [0.39, 1319, 1319, 0.12, 0.4], [0.52, 2093, 2093, 0.24, 0.4]], { type: 'triangle' }), bad: sputter },
+      praiseNamed: ['Sweet answer, {name}!', 'That\'s the scoop, {name}!', 'Cool as ice cream, {name}!', 'Sprinkle-tastic, {name}!', 'Ding ding! Delicious, {name}!'],
+      praise: ['Sweet!', 'Sprinkle-tastic!', 'Ding ding!'] },
+  ];
+  const carsParty = ctx => {
+    horn(ctx, [[0, 392, 392, 0.12, 0.3], [0.18, 392, 392, 0.12, 0.3], [0.36, 523, 523, 0.4, 0.3]]);
+    setTimeout(() => vroom(ctx, 90, 0.4), 800);
+  };
+  const carsExtraCss = `
+  html.theme-cars .peek svg { animation: car-idle .5s ease-in-out infinite; }
+  html.theme-cars .peek.swap svg { animation: car-in .55s ease-out, car-idle .5s ease-in-out .55s infinite; }
+  html.theme-cars .card.good .peek svg { animation: car-zoom 1.1s ease-in-out; }
+  html.theme-cars .card.bad .peek svg { animation: car-bump .55s ease-in-out; }
+  html.theme-cars .card.good .peek .wheel { transform-box: fill-box; transform-origin: center; animation: wheel-spin .3s linear 4; }
+  @keyframes car-idle { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-1.2px); } }
+  @keyframes car-in { from { transform: translateX(-150px); opacity: 0; } 50% { opacity: 1; } to { transform: none; } }
+  @keyframes car-zoom { 0% { transform: none; } 30% { transform: translateX(46px); } 50% { transform: translateX(60px) rotate(-5deg); } 75% { transform: translateX(-8px); } 100% { transform: none; } }
+  @keyframes car-bump { 0%,100% { transform: none; } 20% { transform: translate(-5px,-2px) rotate(-3deg); } 40% { transform: translate(5px,0) rotate(2deg); } 60% { transform: translate(-3px,-1px); } 80% { transform: translate(2px,0); } }
+  @keyframes wheel-spin { to { transform: rotate(360deg); } }
+  html.theme-cars .hero { width: 430px; display: flex; gap: 10px; align-items: flex-end; padding-bottom: 14px;
+    background: repeating-linear-gradient(90deg, #f6c026 0 18px, transparent 18px 34px) 0 calc(100% - 4px) / 100% 4px no-repeat,
+                linear-gradient(#5b6573, #5b6573) bottom / 100% 12px no-repeat; border-radius: 4px; }
+  html.theme-cars .hero.small { width: 340px; }
+  html.theme-cars .hero .dancer { flex: 1; animation: car-cruise 1.4s ease-in-out infinite; }
+  html.theme-cars .hero .dancer:nth-child(2) { animation-delay: .45s; }
+  html.theme-cars .hero .dancer:nth-child(3) { animation-delay: .9s; }
+  @keyframes car-cruise { 0%,100% { transform: translateX(0); } 50% { transform: translateX(8px) translateY(-2px); } }
+  @media (max-width: 600px) { html.theme-cars .hero { width: 310px; } html.theme-cars .hero.small { width: 260px; } }
+  html.theme-cars .party .stage div { width: 110px; animation: car-cruise .6s ease-in-out infinite; }
+  html.theme-cars .party .stage div:nth-child(even) { animation-delay: .3s; }
+  html.theme-cars .party .stage { border-bottom-color: #5b6573; }
+  html.theme-cars .party { background: radial-gradient(circle at 50% 40%, rgba(255,255,255,.97) 0, rgba(234,247,249,.95) 45%, rgba(214,232,240,.95) 100%); }
+  html.theme-cars .party .ptitle { color: #0a7480; }
+  @media (max-width: 600px) { html.theme-cars .party .stage div { width: 62px; } }
+  html.theme-cars .hdr-cat { width: 1.15in; }
+  html.theme-cars .hdr-cat.small { width: 0.75in; }
+  `;
+
   const themes = {
     classic: { id: 'classic', label: 'Classic' },
     cats: {
@@ -738,6 +865,74 @@
         dotB: dataUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${notePath('#7c5cd6')}</svg>`),
         soft: '#f0c2da', featureTint: '#fdeaf4',
       }) + danceExtraCss,
+    },
+    cars: {
+      id: 'cars', label: 'Cars',
+      icon: carIcon(), iconSmall: carIcon('mini-star'),
+      art: { sit: raceCar.sit, peek: raceCar.peek },
+      animals: carCast,                                  // a different vehicle drives up to each problem
+      heroGroup: 3,
+      party: { title: 'Victory lap! 🏁', sound: carsParty },
+      sounds: { goodDelay: 650, badDelay: 750 },
+      audio: {
+        intro: 'Start your engines, {name}! Here\'s your first one. {fact}?',
+        praiseNamed: ['Zoom zoom, {name}!', 'Full speed ahead, {name}!', 'You\'re in the fast lane, {name}!', 'Vroom vroom, {name}!'],
+        praise: ['Zoom zoom!', 'Vroom vroom!', 'Full speed ahead!'],
+        ask: ['{name}, what\'s {fact}?', 'Here comes {animal}! {name}, {fact}?', '{name}, {animal} wants to know: {fact}?', 'Start your engines, {name}! {fact}?'],
+        faster: ['Zoom! You got faster, {name}!', 'Turbo speed, {name}!', 'Faster than a race car, {name}!'],
+        streak: ['{n} in a row, {name}! You\'re in the fast lane!', 'Vroom vroom! {n} in a row, {name}!', '{n} in a row! Full speed ahead, {name}!'],
+        oops: [
+          'Nice try, {name}! {fact} is {ans}.',
+          'Oops, a little bump! {fact} is {ans}. Keep driving, {name}!',
+          'Almost, {name}! {fact} is {ans}.',
+          'Good try, {name}! {fact} is {ans}. Back on the road!',
+        ],
+        levels: ['Tricycle Rider', 'Scooter Rider', 'Go-Kart Driver', 'Taxi Driver', 'Bus Driver', 'Truck Driver', 'Race Car Driver', 'Speed Champion', 'Turbo Superstar', 'Grand Prix Legend'],
+        levelUp: 'Vroom! Level up, {name}! You\'re now a {level}!',
+        levelBadge: '🏁',
+        doneGreat: 'You won the race, {name}!', doneGood: 'Great driving, {name}!', doneNone: 'See you at the starting line, {name}!',
+        doneSpokenGreat: 'You crossed the finish line, {name}! Vroom vroom!', doneSpokenGood: 'Great driving, {name}!',
+      },
+      print: {
+        cheers: [
+          "start your engines — let's go!",
+          "you're in the fast lane today!",
+          "zoom through these problems!",
+          "full speed ahead, math champ!",
+          "you're the driver of your smart brain!",
+          "race to the finish line — you've got this!",
+          "beep beep! Smart kid coming through!",
+          "honk if you love math!",
+          "you're turbo-charged and ready!",
+          "shift into high gear!",
+          "every answer gets you closer to the checkered flag!",
+          "you're a math race car — vroom!",
+          "buckle up for a brainy ride!",
+          "you're on the road to math greatness!",
+          "green light — go, go, go!",
+          "you drive these numbers like a pro!",
+          "no speed bumps can stop you!",
+          "pit stop? No way — keep going!",
+          "you're number one on the math track!",
+          "you make math go zoom!",
+        ],
+        side2: 'keep zooming!',
+        turn: 'Turn over — next lap &rarr;',
+        finish: 'Checkered flag — check your work!',
+        footPaws: carIcon() + carIcon(),
+      },
+      css: petCss('cars', {
+        ink: '#1d2633', muted: '#64707f', bg: '#f3f6fa', line: '#d9e1ea', band: '#e9eff6', box: '#8794a6',
+        accent: '#0e9aa7', accentDark: '#0a7480',
+        pattern: dataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140" viewBox="0 0 140 140"><g opacity=".09">
+          <g transform="translate(16 18)"><rect width="18" height="12" fill="#fff" stroke="#2b2f36"/><rect width="6" height="4" fill="#2b2f36"/><rect x="12" width="6" height="4" fill="#2b2f36"/>
+          <rect x="6" y="4" width="6" height="4" fill="#2b2f36"/><rect y="8" width="6" height="4" fill="#2b2f36"/><rect x="12" y="8" width="6" height="4" fill="#2b2f36"/><path d="M0 0 v22" stroke="#2b2f36" stroke-width="2"/></g>
+          <path d="M60 100 h14 M84 100 h14 M108 100 h14" stroke="#2b2f36" stroke-width="4" stroke-linecap="round"/>
+          <g transform="translate(92 26) scale(1.4)">${tirePath}</g></g></svg>`),
+        dotA: dataUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${tirePath}</svg>`),
+        dotB: dataUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${conePath}</svg>`),
+        soft: '#a9dde2', featureTint: '#e6f6f8',
+      }) + carsExtraCss,
     },
   };
 
