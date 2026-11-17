@@ -182,6 +182,36 @@
     .done-line { font-size: 18px; }
   }
   .peek, .hero { display: none; }
+  .card { position: relative; }
+  .stat.pts { background: #fff8e1; border-color: #f3d27a; }
+  .pop { position: absolute; right: 18px; top: 12px; font-size: 26px; font-weight: 800; color: #e0a000; pointer-events: none; opacity: 0; z-index: 3; }
+  .pop.show { animation: pop-up 1.2s ease-out forwards; }
+  @keyframes pop-up { 0% { opacity: 0; transform: translateY(8px) scale(.8); } 15% { opacity: 1; transform: translateY(0) scale(1.15); }
+                      70% { opacity: 1; } 100% { opacity: 0; transform: translateY(-28px); } }
+  .progress { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; text-align: left; margin: 20px auto 0; max-width: 520px; }
+  .progress .lvl { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 19px; }
+  .progress .lvl .badge { font-size: 26px; }
+  .progress .lvl small { margin-left: auto; font-size: 14px; color: var(--muted); font-weight: 700; white-space: nowrap; }
+  .progress .bar { height: 10px; background: #eef1f5; border-radius: 6px; overflow: hidden; margin: 8px 0 4px; }
+  .progress .bar i { display: block; height: 100%; background: linear-gradient(90deg, #f5b301, #ee8a0f); border-radius: 6px; }
+  .progress .next { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .progress h4 { margin: 14px 0 6px; font-size: 15px; }
+  .trow { display: grid; grid-template-columns: 2.6em 1fr 4.4em; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; margin: 6px 0; }
+  .trow .bar { margin: 0; height: 12px; }
+  .trow .bar i { background: linear-gradient(90deg, #34c27a, #1f9d55); }
+  .trow span:last-child { font-size: 13px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+  .newly { margin-top: 10px; font-size: 14px; font-weight: 600; color: #3b4656; }
+  .progress .reset { margin-top: 10px; font-size: 13px; }
+  .hintbox { background: #fffbe6; border: 2px solid #f3d27a; border-radius: 16px; padding: 12px 16px; margin-top: 12px; text-align: left; }
+  .hintbox .hl { font-size: 20px; font-weight: 800; line-height: 1.35; }
+  .hintbox .hl b { color: #c98a00; }
+  .hintbox .chips2 { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .hintbox .chips2 span { background: #fff; border: 1px solid #f3d27a; border-radius: 8px; padding: 3px 9px; font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; }
+  .hintbox .chips2 span.q { background: #f5b301; color: #fff; border-color: #f5b301; }
+  .hintbox .more { margin-top: 6px; font-size: 15px; color: #6b5a2a; font-weight: 600; }
+  .btn.hint { border-color: #f3d27a; background: #fffbe6; }
+  .btn.hint.glow { animation: glow 1.2s ease-in-out infinite; border-color: #f5b301; }
+  @keyframes glow { 50% { box-shadow: 0 0 0 7px rgba(245,179,1,.35); } }
 </style>
 </head>
 <body>
@@ -207,6 +237,7 @@
     </div>
     <div><button class="big" id="btnStart">Start</button></div>
     <p class="goal" id="goalLine"></p>
+    <div class="progress" id="progressStart"></div>
     <p class="note" id="trickyNote" hidden></p>
     <p class="note" id="startNote"></p>
   </section>
@@ -217,9 +248,11 @@
       <span class="stat">⏱ <b id="clock">0:00</b></span>
       <span class="stat">Answered <b id="nAnswered">0</b></span>
       <span class="stat">⭐ Right <b id="nRight">0</b></span>
+      <span class="stat pts">🏆 <b id="nPoints">0</b> points</span>
     </div>
     <div class="card" id="card">
       <div class="peek" id="peek"></div>
+      <div class="pop" id="ptsPop"></div>
       <div class="problem">
         <span id="pa"></span><span class="op" id="pop"></span><span id="pb"></span><span class="op">=</span>
         <span class="slot empty" id="slot"></span>
@@ -228,6 +261,7 @@
       <div class="status" id="status"></div>
     </div>
 
+    <div class="hintbox" id="hintBox" hidden></div>
     <div class="pad" id="pad">
       <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
       <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
@@ -249,6 +283,7 @@
 
     <div class="controls">
       <button class="btn mic" id="btnMic" hidden>🎤 Tap to talk</button>
+      <button class="btn hint" id="btnHint">💡 Hint</button>
       <button class="btn" id="btnRepeat">🔁 Hear it again</button>
       <button class="btn stop" id="btnStop">Stop</button>
     </div>
@@ -265,7 +300,9 @@
       <div class="tile"><div class="v" id="tRight">0</div><div class="l">right</div></div>
       <div class="tile"><div class="v" id="tTime">0:00</div><div class="l">total time</div></div>
       <div class="tile"><div class="v" id="tAvg">–</div><div class="l">average seconds per answer</div></div>
+      <div class="tile"><div class="v" id="tPoints">0</div><div class="l">points earned</div></div>
     </div>
+    <div class="progress" id="progressDone"></div>
     <div class="tricky" id="trickyBox" hidden>
       <h3>Tricky ones</h3>
       <p class="sub" id="trickySub"></p>
@@ -287,10 +324,19 @@
   let KID_NAME = 'Superstar';
   try { KID_NAME = (localStorage.getItem('worksheetKidName') || '').trim().slice(0, 20) || KID_NAME; } catch (e) {}
   const OPS = 'mix';                    // 'mul' = × only, 'div' = ÷ only, 'mix' = both (about half each)
-  const DEFAULT_TABLES = [2, 3, 5, 10]; // tables to practice (÷ problems divide by these)
+  const DEFAULT_TABLES = [2, 3, 4, 5, 10]; // tables to practice (÷ problems divide by these)
   const MIN = 2, MAX = 12;              // each table runs 2 … 12
   const GOAL_SECONDS = 5;               // answers slower than this come back until they get faster
   const RETRY_AFTER = 3;                // a missed or slow problem comes back about this many problems later
+  const MASTER_AFTER = 2;               // a fact is "mastered" after this many fast right answers in a row
+  const MASTERED_SHOW = 0.25;           // mastered facts still come up this often (0.25 = about 1 in 4) for review
+  const POINTS = { right: 10, fast: 5, streak5: 20, faster: 10, mastered: 15, hinted: 5 };  // never takes points away
+  const HINT_GLOW = 7;                  // seconds before the Hint button glows (3 on tricky ones)
+  const LEVEL_AT = [0, 150, 400, 750, 1200, 1800, 2500, 3500, 5000, 7000];      // total points for each level
+  const LEVELS = TA.levels || ['Math Rookie', 'Number Explorer', 'Times-Table Trainee', 'Math Whiz', 'Number Ninja',
+    'Math Wizard', 'Super Solver', 'Math Champion', 'Math Superstar', 'Math Legend'];
+  const LEVEL_UP = TA.levelUp || 'Level up, {name}! You\'re now a {level}!';
+  const LEVEL_BADGE = TA.levelBadge || '🏅';
   // How often the name is used: 1 = every time, 0.5 = about half the time
   const NAME_IN_PRAISE = 0.75;          // after a right answer
   const NAME_IN_QUESTION = 0.35;        // when reading a problem ("{name}, what's 3 times 5?")
@@ -339,12 +385,37 @@
   $('goalLine').textContent = `⏱ Goal: answer each one in ${GOAL_SECONDS} seconds. Missed or slow ones come back until you're fast!`;
 
   // ---------- Tricky problems remembered between sessions (saved in this browser) ----------
-  const STORE = 'audioPracticeTricky:' + ops + ':' + tables.join(',');
+  const STORE = 'audioPracticeTricky:' + ops;
   let saved = {};
-  try { saved = JSON.parse(localStorage.getItem(STORE) || '{}') || {}; } catch (e) { saved = {}; }
+  try {
+    saved = JSON.parse(localStorage.getItem(STORE) || 'null');
+    if (!saved) {                                     // older versions kept one list per set of tables
+      saved = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(STORE + ':')) Object.assign(saved, JSON.parse(localStorage.getItem(key) || '{}'));
+      }
+    }
+  } catch (e) { saved = {}; }
   const persist = () => { try { localStorage.setItem(STORE, JSON.stringify(saved)); } catch (e) {} };
+
+  // How well each fact is known: fs = fast right answers in a row (saved in this browser)
+  const MSTORE = 'audioPracticeMastery';
+  let mastery = {};
+  try { mastery = JSON.parse(localStorage.getItem(MSTORE) || '{}') || {}; } catch (e) { mastery = {}; }
+  const saveMastery = () => { try { localStorage.setItem(MSTORE, JSON.stringify(mastery)); } catch (e) {} };
+  const isMastered = k => !!(mastery[k] && mastery[k].fs >= MASTER_AFTER);
+
+  // Points and level (saved in this browser)
+  const SSTORE = 'audioPracticeScore';
+  let score = { total: 0, best: 0 };
+  try { Object.assign(score, JSON.parse(localStorage.getItem(SSTORE) || '{}')); } catch (e) {}
+  const saveScore = () => { try { localStorage.setItem(SSTORE, JSON.stringify(score)); } catch (e) {} };
+  function levelOf(total) { let i = 0; while (i + 1 < LEVEL_AT.length && total >= LEVEL_AT[i + 1]) i++; return i; }
+
   function showTrickyNote() {
-    const n = Object.keys(saved).length;
+    const here = new Set(tables.flatMap(tableKeys));
+    const n = Object.keys(saved).filter(k => here.has(k)).length;
     const el = $('trickyNote');
     el.hidden = n === 0;
     if (n) {
@@ -371,16 +442,48 @@
     }
     return { op, t, n, a: t * n, b: t, ans: n, sym: '÷', words: `${t * n} divided by ${t}` };
   }
+  const opList = () => ops === 'mix' ? ['mul', 'div'] : [ops];
+  function tableKeys(t) {
+    const ks = [];
+    for (let n = MIN; n <= MAX; n++) for (const op of opList()) ks.push(keyOf({ op, t, n }));
+    return ks;
+  }
   function makeDeck() {
-    const d = [];
+    const d = [], held = [];
     for (const t of tables) for (let n = MIN; n <= MAX; n++) {
-      for (const op of (ops === 'mix' ? ['mul', 'div'] : [ops])) {
-        const p = makeProblem(op, t, n);
-        d.push(p);
-        if (saved[keyOf(p)]) d.push(makeProblem(op, t, n));   // tricky ones from last time come up twice as often
+      for (const op of opList()) {
+        const p = makeProblem(op, t, n), k = keyOf(p);
+        if (saved[k]) d.push(p, makeProblem(op, t, n));          // tricky: comes up twice as often
+        else if (isMastered(k)) (Math.random() < MASTERED_SHOW ? d : held).push(p);   // mastered: only now and then
+        else d.push(p);
       }
     }
+    while (d.length < 8 && held.length) d.push(held.splice(Math.floor(Math.random() * held.length), 1)[0]);
     return shuffle(d);
+  }
+
+  // Level, points and how many facts are mastered in each table
+  function renderProgress(el, newly) {
+    const lv = levelOf(score.total), nextAt = LEVEL_AT[lv + 1];
+    const pct = nextAt ? Math.round(100 * (score.total - LEVEL_AT[lv]) / (nextAt - LEVEL_AT[lv])) : 100;
+    let h = `<div class="lvl"><span class="badge">${LEVEL_BADGE}</span>${LEVELS[lv]}<small>🏆 ${score.total.toLocaleString()} points</small></div>` +
+      `<div class="bar"><i style="width:${pct}%"></i></div>` +
+      `<div class="next">${nextAt ? `${(nextAt - score.total).toLocaleString()} more points to reach <b>${LEVELS[lv + 1]}</b>` : 'Top level reached! 🎉'}</div>` +
+      `<h4>Facts mastered <span style="font-weight:600;color:var(--muted);font-size:13px">(answered fast ${MASTER_AFTER} times in a row)</span></h4>`;
+    for (const t of tables) {
+      const ks = tableKeys(t), m = ks.filter(isMastered).length;
+      h += `<div class="trow"><span>${t}s</span><div class="bar"><i style="width:${Math.round(100 * m / ks.length)}%"></i></div><span>${m} / ${ks.length}</span></div>`;
+    }
+    if (newly && newly.length) h += `<div class="newly">${LEVEL_BADGE} Mastered today: ${newly.join(', ')}</div>`;
+    h += `<div class="reset"><button class="linkish" data-reset>Reset points and progress</button></div>`;
+    el.innerHTML = h;
+    el.querySelector('[data-reset]').onclick = () => {
+      if (!confirm('Reset points, level and mastered facts on this device?')) return;
+      mastery = {}; saved = {}; score = { total: 0, best: 0 };
+      saveMastery(); persist(); saveScore();
+      renderProgress($('progressStart')); if (el !== $('progressStart')) renderProgress(el);
+      showTrickyNote();
+    };
   }
   let deck = [], upcoming = [], lastFam = null;
   function draw(avoid) {
@@ -636,6 +739,7 @@
       if (n === null) for (const a of alts.slice(1)) { const m = parseSpoken(a); if (m !== null) { n = m; break; } }
       if (n === null) {
         if (/\b(stop|i'?m done|all done|the end)\b/i.test(top)) { stopGame(); return; }
+        if (/\b(hint|help|clue)\b/i.test(top)) { showHint(); return; }
         if (/\b(repeat|again|what|huh|say it)\b/i.test(top)) { hearAgain(); return; }
         if (recWanted) setStatus('listening');
         return;
@@ -677,10 +781,67 @@
     $('lessonCount').innerHTML = steps.map(s => `<span>${s}</span>`).join('');
     $('lessonTail').textContent = tail;
     $('pad').hidden = true;
+    $('hintBox').hidden = true; $('btnHint').hidden = true;
     $('lesson').hidden = false;
     if (window.innerHeight < 900) setTimeout(() => $('lesson').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
     lessonSpeech = opening + ' ' + say;
   }
+  // ---------- Hints: a strategy first, then counting help ----------
+  const EASY_ORDER = { 10: 0, 2: 1, 5: 2, 4: 3, 3: 4 };
+  function hintFor(p, level) {
+    if (p.op === 'div') {
+      const b = p.b, a = p.a, steps = Array.from({ length: p.ans }, (_, i) => b * (i + 1));
+      if (level === 1) return { html: `<div class="hl">Think: ${b} × <b>?</b> = ${a}</div><div class="more">What number times ${b} makes ${a}?</div>`,
+                                say: `Think. ${b} times what makes ${a}?` };
+      return { html: `<div class="hl">Count by ${b}s up to ${a}, then count the jumps!</div><div class="chips2">${steps.map(s => `<span>${s}</span>`).join('')}</div>`,
+               say: `Count by ${plural(b)} up to ${a}: ${steps.join(', ')}. How many jumps was that?` };
+    }
+    const ea = EASY_ORDER[p.a] ?? 9, eb = EASY_ORDER[p.b] ?? 9;
+    const [f, g] = ea <= eb ? [p.a, p.b] : [p.b, p.a];        // use the easier number's trick
+    if (level === 2 || !(f in EASY_ORDER)) {
+      const steps = Array.from({ length: g - 1 }, (_, i) => f * (i + 1));
+      return { html: `<div class="hl">Count by ${f}s, ${g} times:</div><div class="chips2">${steps.map(s => `<span>${s}</span>`).join('')}<span class="q">?</span></div>`,
+               say: `Count by ${plural(f)}: ${steps.join(', ')}. One more ${f} makes?` };
+    }
+    switch (f) {
+      case 10: return { html: `<div class="hl">Times 10: put a 0 on the end of ${g}!</div>`, say: `Here's a trick. For times 10, put a zero on the end of ${g}.` };
+      case 2: return { html: `<div class="hl">Times 2 means double: ${g} + ${g} = <b>?</b></div>`, say: `Times 2 means double it. What's ${g} plus ${g}?` };
+      case 5: return { html: `<div class="hl">${g} × 10 = ${g * 10}. Times 5 is half of that: <b>?</b></div>`, say: `Here's a trick. ${g} times 10 is ${g * 10}. Times 5 is half of that.` };
+      case 4: return { html: `<div class="hl">Times 4: double, then double again. ${g} → ${g * 2} → <b>?</b></div>`, say: `Times 4 is double, double. Double ${g} is ${g * 2}. Now double ${g * 2}.` };
+      default: return { html: `<div class="hl">Times 3: double, plus one more. ${g} + ${g} = ${g * 2}, + ${g} = <b>?</b></div>`, say: `Times 3 is double and one more. Double ${g} is ${g * 2}. Add one more ${g}.` };
+    }
+  }
+  let hintLevel = 0, glowTimer = null;
+  function resetHint() {
+    hintLevel = 0; clearTimeout(glowTimer);
+    const b = $('btnHint'); b.hidden = false; b.disabled = false; b.textContent = '💡 Hint'; b.classList.remove('glow');
+    $('hintBox').hidden = true;
+  }
+  function armHintGlow() {
+    clearTimeout(glowTimer);
+    const tok = session, c = cur;
+    glowTimer = setTimeout(() => {
+      if (tok !== session || state !== 'asking' || cur !== c || hintLevel) return;
+      $('btnHint').classList.add('glow');
+      $('status').innerHTML = (recBusy ? '<span class="dot"></span>' : '') + 'Stuck? Tap 💡 Hint' + (voiceOn ? ' or say “hint”' : '');
+    }, (saved[keyOf(cur)] ? 3 : HINT_GLOW) * 1000);
+  }
+  function showHint() {
+    if (state !== 'asking' || hintLevel >= 2) return;
+    hintLevel++;
+    const b = $('btnHint'); b.classList.remove('glow');
+    if (hintLevel >= 2) { b.textContent = '💡 Hint shown'; b.disabled = true; } else b.textContent = '💡 More help';
+    const h = hintFor(cur, hintLevel);
+    $('hintBox').innerHTML = h.html; $('hintBox').hidden = false;
+    pauseListening();
+    if (talkOn) setStatus('speaking');
+    speak(h.say, () => {
+      if (state !== 'asking') return;
+      if (voiceOn) listen();
+      setStatus(voiceOn ? 'starting' : 'type');
+    }, 0);
+  }
+
   function hideLesson() {
     if (!$('lesson').hidden && window.innerHeight < 900) window.scrollTo({ top: 0, behavior: 'smooth' });
     $('lesson').hidden = true; $('pad').hidden = false;
@@ -689,6 +850,15 @@
   // ---------- The game ----------
   let session = 0, state = 'idle', cur = null, typed = '';
   let answered = 0, right = 0, t0 = 0, clockTimer = null, lastPraise = -1, streak = 0, firstAsk = true;
+  let sessionPts = 0, newlyMastered = [];
+  function award(pts) {
+    const before = levelOf(score.total);
+    sessionPts += pts; score.total += pts; saveScore();
+    $('nPoints').textContent = sessionPts;
+    const pop = $('ptsPop'); pop.textContent = '+' + pts; pop.classList.remove('show'); void pop.offsetWidth; pop.classList.add('show');
+    const after = levelOf(score.total);
+    return after > before ? LEVELS[after] : null;
+  }
   let askedAt = 0, readyAt = null, times = [], facts = new Map();
 
   function show(id) { for (const s of ['start', 'play', 'done']) $(s).hidden = s !== id; }
@@ -737,6 +907,7 @@
     try { localStorage.setItem('audioPracticePrefs', JSON.stringify({ talk: $('optTalk').checked, voice: $('optVoice').checked })); } catch (e) {}
     $('voiceNote').textContent = '';
     answered = 0; right = 0; times = []; facts = new Map(); streak = 0; firstAsk = true;
+    sessionPts = 0; newlyMastered = []; $('nPoints').textContent = '0';
     deck = []; upcoming = []; lastFam = null; recEnds = [];
     t0 = performance.now();
     clearInterval(clockTimer); clockTimer = setInterval(tick, 250); tick();
@@ -755,10 +926,12 @@
     $('pa').textContent = cur.a; $('pop').textContent = cur.sym; $('pb').textContent = cur.b;
     setCard(''); setFeedback('', '');
     hideLesson();
+    resetHint();
     state = 'asking';
     pauseListening();
     askedAt = performance.now();
     readyAt = talkOn ? null : askedAt;               // the answer clock starts once the problem has been read
+    if (!talkOn) setTimeout(armHintGlow, 0);
     setStatus(talkOn ? 'speaking' : (voiceOn ? 'listening' : 'type'));
     let ask = cur.words;
     if (firstAsk) ask = TA.intro ? withName(TA.intro).replace('{fact}', cur.words)
@@ -768,6 +941,7 @@
     speak(ask, () => {
       if (state !== 'asking') return;
       if (readyAt === null) readyAt = performance.now();
+      armHintGlow();
       if (voiceOn) listen();
       setStatus(voiceOn ? 'starting' : 'type');
     }, 0);
@@ -828,15 +1002,25 @@
     const ok = value === cur.ans;
     fact.tries.push({ sec, ok });
 
+    const m = mastery[k] || (mastery[k] = { fs: 0, n: 0, ok: 0 });
+    const wasMastered = isMastered(k);
+    m.n++;
     if (ok) {
       right++; streak++;
-      const fast = sec <= GOAL_SECONDS;
+      const hinted = hintLevel > 0;
+      const fast = sec <= GOAL_SECONDS && !hinted;     // an answer after a hint still needs more practice
+      m.ok++; m.fs = fast ? m.fs + 1 : 0;
+      let pts = (hinted ? POINTS.hinted : POINTS.right) + (fast ? POINTS.fast : 0) + (streak % 5 === 0 ? POINTS.streak5 : 0);
+      let extra = '';
+      if (!wasMastered && isMastered(k)) { pts += POINTS.mastered; newlyMastered.push(labelOf(cur)); extra = ` · ${LEVEL_BADGE} Mastered!`; }
+      saveMastery();
       typed = String(value); renderSlot();
       soundGood(); setCard('good');
       let phrase = streak % 5 === 0 ? withName(pick(STREAK)).replace('{n}', streak) : pickPraise(), note;
       if (fast && wasTricky) {                       // a tricky one, now fast: it's off the tricky list
         fact.tricky = true; fact.cleared = true;
         delete saved[k]; persist();
+        pts += POINTS.faster;
         phrase = withName(pick(FASTER));
         note = prevSec && prevSec > sec ? `⏱ ${f1(sec)} seconds, down from ${f1(prevSec)}! 🚀` : `⏱ ${f1(sec)} seconds. Fast this time! 🚀`;
       } else if (fast) {
@@ -845,13 +1029,18 @@
         fact.tricky = true; fact.cleared = false;
         saved[k] = { label: fact.label, ans: fact.ans, last: +f1(sec) }; persist();
         requeue(cur, RETRY_AFTER + 1);
-        note = `⏱ ${f1(sec)} seconds. This one will come back so you can get faster!`;
+        note = hinted ? '💡 You used a hint. This one will come back for practice!'
+                      : `⏱ ${f1(sec)} seconds. This one will come back so you can get faster!`;
       }
+      const newLevel = award(pts);
+      note += ` · +${pts} points${extra}`;
+      if (newLevel) { note += ` · 🎉 Level up: ${newLevel}!`; phrase += ' ' + withName(LEVEL_UP).replace('{level}', newLevel); }
       setFeedback('✓ ' + phrase, 'good');
       $('status').textContent = note;
       updateStats();
       setTimeout(() => { if (tok === session) speak(phrase, goNext, fast ? 800 : 1800); }, (THEME.sounds && THEME.sounds.goodDelay) || 350);
     } else {
+      m.fs = 0; saveMastery();
       fact.tricky = true; fact.cleared = false;
       saved[k] = { label: fact.label, ans: fact.ans, last: null }; persist();
       requeue(cur, RETRY_AFTER);                     // it comes back a few problems later
@@ -879,6 +1068,7 @@
     pauseListening();
     if (canSpeak) speechSynthesis.cancel();
     clearInterval(clockTimer);
+    clearTimeout(glowTimer);
     const ms = performance.now() - t0;
 
     const pct = answered ? Math.round(100 * right / answered) : 0;
@@ -891,6 +1081,13 @@
     $('tRight').textContent = answered ? `${right} (${pct}%)` : '0';
     $('tTime').textContent = mmss(ms);
     $('tAvg').textContent = times.length ? f1(avg) : '–';
+    const record = sessionPts > 0 && sessionPts > (score.best || 0);
+    if (record) score.best = sessionPts;
+    saveScore();
+    $('tPoints').textContent = sessionPts.toLocaleString() + (record ? ' 🎉' : '');
+    $('doneLine').innerHTML += sessionPts ? ` You earned <b>${sessionPts.toLocaleString()}</b> points${record ? ' — a new record!' : '.'}` : '';
+    renderProgress($('progressDone'), newlyMastered);
+    renderProgress($('progressStart'));
 
     const tricky = [...facts.values()].filter(f => f.tricky);
     const cleared = tricky.filter(f => f.cleared).length;
@@ -906,6 +1103,7 @@
     if (answered) {
       speak(`You answered ${answered} problem${answered === 1 ? '' : 's'} in ${longTime(ms)}, and got ${right} right. ` +
             (cleared ? `You got faster on ${cleared} tricky ${cleared === 1 ? 'one' : 'ones'}! ` : '') +
+            (sessionPts ? `You earned ${sessionPts} points${record ? ', a new record' : ''}! ` : '') +
             withName(pct >= 90 ? (TA.doneSpokenGreat || 'Amazing work, {name}!') : (TA.doneSpokenGood || 'Great job, {name}!')), null, 0);
     }
     showTrickyNote();
@@ -916,6 +1114,7 @@
   $('btnAgain').onclick = startGame;
   $('btnStop').onclick = stopGame;
   $('btnRepeat').onclick = hearAgain;
+  $('btnHint').onclick = showHint;
   $('btnGotIt').onclick = gotIt;
   $('btnMic').onclick = () => {
     if (state !== 'asking' && state !== 'lesson') return;
@@ -939,6 +1138,7 @@
     if (state !== 'asking') return;
     if (/^\d$/.test(e.key)) { press(e.key); e.preventDefault(); }
     else if (e.key === 'Backspace') { press('back'); e.preventDefault(); }
+    else if (e.key === 'h' || e.key === 'H') { showHint(); e.preventDefault(); }
     else if (e.key === 'Enter') { press('ok'); e.preventDefault(); }
   });
 
@@ -959,6 +1159,7 @@
     $('startNote').textContent = 'Voice answers need the internet. The first time, the browser asks to use the microphone — click Allow.';
   }
   showTrickyNote();
+  renderProgress($('progressStart'));
 
   window.MathPractice = { parseSpoken };             // handy for testing
 })();
