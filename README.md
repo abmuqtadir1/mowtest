@@ -11,7 +11,7 @@ Math practice for kids: printable worksheets (legal paper, two-sided) and an aud
 | `multiplication-3-and-5.html` | Multiplication · 3 & 5 |
 | `division-2-3-5-10.html` | Division by 2, 3, 5, 10 |
 | `mixed-multiply-divide-2-3-5-10.html` | × and ÷ mixed |
-| `themes.js` | Themes (Classic, Cats, Chickens) used by every page; picked on the list page and saved only on each device |
+| `themes.js` | Themes (Classic, Cats, Chickens, Animals) used by every page; picked on the list page and saved only on each device |
 
 Every page makes new problems each time it's opened. Settings (tables, rows, paper size, goal seconds, etc.) are at the top of each page's script.
 

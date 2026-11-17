@@ -381,6 +381,14 @@
     tables.map((t, i) => `<span class="chip" style="background:${colors[i % colors.length]}">${t}</span>`).join('');
   if (THEME.icon) document.querySelector('.brand svg').outerHTML = THEME.icon;
   if (THEME.art) { $('heroStart').innerHTML = THEME.art.sit; $('heroDone').innerHTML = THEME.art.sit; $('peek').innerHTML = THEME.art.peek; }
+  // Animals theme: a different animal for each problem (its picture, sound and cheers)
+  let curAnimal = null;
+  function pickAnimal(avoid) {
+    const list = THEME.animals; let a;
+    do { a = list[Math.floor(Math.random() * list.length)]; } while (list.length > 1 && a === avoid);
+    return a;
+  }
+  if (THEME.animals) $('heroStart').innerHTML = pickAnimal().sit;
   $('kidName').innerHTML = [...KID_NAME].map((ch, i) => `<span style="color:${colors[i % colors.length]}">${ch.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))}</span>`).join('');
   $('goalLine').textContent = `⏱ Goal: answer each one in ${GOAL_SECONDS} seconds. Missed or slow ones come back until you're fast!`;
 
@@ -528,9 +536,9 @@
     o.connect(g); g.connect(actx.destination);
     o.start(t0); o.stop(t0 + dur + 0.05);
   }
-  const soundGood = () => THEME.sounds ? THEME.sounds.good(actx) : chime();
+  const soundGood = () => curAnimal && curAnimal.sounds ? curAnimal.sounds.good(actx) : THEME.sounds && THEME.sounds.good ? THEME.sounds.good(actx) : chime();
   const chime = () => { tone(784, 0, 0.22, 'sine', 0.16); tone(988, 0.08, 0.22, 'sine', 0.16); tone(1319, 0.16, 0.32, 'sine', 0.16); };
-  const soundBad  = () => THEME.sounds ? THEME.sounds.bad(actx) : buzz();
+  const soundBad  = () => curAnimal && curAnimal.sounds ? curAnimal.sounds.bad(actx) : THEME.sounds && THEME.sounds.bad ? THEME.sounds.bad(actx) : buzz();
   const buzz = () => { tone(330, 0, 0.16, 'triangle', 0.22); tone(247, 0.17, 0.28, 'triangle', 0.22); };
   const soundReady = () => tone(1175, 0, 0.12, 'sine', 0.09);   // "your turn" blip when the mic opens
 
@@ -927,6 +935,11 @@
     setCard(''); setFeedback('', '');
     hideLesson();
     resetHint();
+    if (THEME.animals) {
+      curAnimal = pickAnimal(curAnimal);
+      const pk = $('peek'); pk.innerHTML = curAnimal.peek;
+      pk.classList.remove('swap'); void pk.offsetWidth; pk.classList.add('swap');
+    }
     state = 'asking';
     pauseListening();
     askedAt = performance.now();
@@ -936,7 +949,8 @@
     let ask = cur.words;
     if (firstAsk) ask = TA.intro ? withName(TA.intro).replace('{fact}', cur.words)
                              : `Hi ${KID_NAME}! Let's do some math. Here's your first one. ${cur.words}?`;
-    else if (Math.random() < NAME_IN_QUESTION) ask = withName(pick(ASK)).replace('{fact}', cur.words);
+    else if (Math.random() < NAME_IN_QUESTION) ask = withName(pick(ASK.filter(t => curAnimal || !t.includes('{animal}'))))
+                                                   .replace('{fact}', cur.words).replace('{animal}', curAnimal ? curAnimal.label : '');
     firstAsk = false;
     speak(ask, () => {
       if (state !== 'asking') return;
@@ -974,7 +988,8 @@
 
   const withName = t => t.split('{name}').join(KID_NAME);
   function pickPraise() {
-    const list = Math.random() < NAME_IN_PRAISE ? PRAISE_NAMED : PRAISE;
+    const named = (curAnimal && curAnimal.praiseNamed) || PRAISE_NAMED, plain = (curAnimal && curAnimal.praise) || PRAISE;
+    const list = Math.random() < NAME_IN_PRAISE ? named : plain;
     let p;
     do { p = withName(pick(list)); } while (list.length > 1 && p === lastPraise);
     lastPraise = p;
@@ -1098,6 +1113,7 @@
       `<li class="${f.cleared ? 'cleared' : ''}"><span class="fact">${f.label} = ${f.ans}</span>` +
       `<span class="tries">${f.tries.map(x => x.ok ? f1(x.sec) + 's' : '✗').join(' → ')}</span>` +
       `<span class="mark">${f.cleared ? '✓ Got faster!' : 'Keep practicing'}</span></li>`).join('');
+    if (THEME.animals) $('heroDone').innerHTML = (curAnimal || pickAnimal()).sit;
     show('done');
 
     if (answered) {
