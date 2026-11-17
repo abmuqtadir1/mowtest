@@ -211,6 +211,24 @@
   .hintbox .more { margin-top: 6px; font-size: 15px; color: #6b5a2a; font-weight: 600; }
   .btn.hint { border-color: #f3d27a; background: #fffbe6; }
   .btn.hint.glow { animation: glow 1.2s ease-in-out infinite; border-color: #f5b301; }
+  /* full-screen dance party (themes that have one) */
+  .party { position: fixed; inset: 0; z-index: 50; pointer-events: none; display: none; flex-direction: column;
+           align-items: center; justify-content: center; overflow: hidden;
+           background: radial-gradient(circle at 50% 40%, rgba(255,255,255,.97) 0, rgba(255,240,250,.95) 45%, rgba(236,224,255,.95) 100%);
+           animation: party-in .25s ease-out; }
+  .party .stage { padding: 0 14px 10px; border-bottom: 8px solid #e7c3ff; border-radius: 0 0 12px 12px; }
+  @keyframes party-in { from { opacity: 0; } to { opacity: 1; } }
+  .party.on { display: flex; }
+  .party .ptitle { font-size: 46px; font-weight: 900; color: #e0457b; text-shadow: 0 3px 0 #fff, 0 0 18px #fff; animation: party-pulse .45s ease-in-out infinite alternate; }
+  .party .stage { display: flex; gap: 6px; margin-top: 12px; align-items: flex-end; }
+  .party .stage div { width: 96px; transform-origin: 50% 100%; animation: party-dance .55s ease-in-out infinite alternate; }
+  .party .stage div:nth-child(even) { animation-direction: alternate-reverse; }
+  .party .stage svg { width: 100%; height: auto; display: block; }
+  .party i { position: absolute; top: -24px; width: 10px; height: 16px; border-radius: 2px; animation: confetti-fall 2.4s linear forwards; }
+  @keyframes party-pulse { to { transform: scale(1.08); } }
+  @keyframes party-dance { from { transform: translateY(0) rotate(-9deg); } to { transform: translateY(-24px) rotate(9deg); } }
+  @keyframes confetti-fall { to { transform: translateY(110vh) rotate(720deg); } }
+  @media (max-width: 600px) { .party .stage div { width: 56px; } .party .ptitle { font-size: 32px; } }
   @keyframes glow { 50% { box-shadow: 0 0 0 7px rgba(245,179,1,.35); } }
 </style>
 </head>
@@ -225,6 +243,7 @@
   <a href="index.html">&larr; <span class="long">All worksheets</span><span class="short">Back</span></a>
 </div>
 
+<div class="party" id="party" aria-hidden="true"></div>
 <main>
   <!-- Start -->
   <section class="screen" id="start">
@@ -388,7 +407,23 @@
     do { a = list[Math.floor(Math.random() * list.length)]; } while (list.length > 1 && a === avoid);
     return a;
   }
-  if (THEME.animals) $('heroStart').innerHTML = pickAnimal().sit;
+  // one animal, or a little group of dancers (Dance Party)
+  const heroHtml = () => THEME.heroGroup
+    ? [...THEME.animals].sort(() => Math.random() - 0.5).slice(0, THEME.heroGroup).map(a => `<div class="dancer">${a.sit}</div>`).join('')
+    : (curAnimal || pickAnimal()).sit;
+  if (THEME.animals) $('heroStart').innerHTML = heroHtml();
+  let partyTimer = null;
+  function danceParty() {
+    if (!THEME.party || !THEME.animals) return;
+    const el = $('party');
+    const confetti = Array.from({ length: 44 }, (_, i) =>
+      `<i style="left:${(Math.random() * 100).toFixed(1)}%;background:${colors[i % colors.length]};animation-delay:${(Math.random() * 0.7).toFixed(2)}s"></i>`).join('');
+    el.innerHTML = `<div class="ptitle">${THEME.party.title || 'Party!'}</div><div class="stage">${THEME.animals.map(a => `<div>${a.sit}</div>`).join('')}</div>${confetti}`;
+    el.classList.add('on');
+    if (THEME.party.sound) setTimeout(() => THEME.party.sound(actx), 250);
+    clearTimeout(partyTimer);
+    partyTimer = setTimeout(() => { el.classList.remove('on'); el.innerHTML = ''; }, 2600);
+  }
   $('kidName').innerHTML = [...KID_NAME].map((ch, i) => `<span style="color:${colors[i % colors.length]}">${ch.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))}</span>`).join('');
   $('goalLine').textContent = `⏱ Goal: answer each one in ${GOAL_SECONDS} seconds. Missed or slow ones come back until you're fast!`;
 
@@ -1048,6 +1083,7 @@
                       : `⏱ ${f1(sec)} seconds. This one will come back so you can get faster!`;
       }
       const newLevel = award(pts);
+      if (newLevel || streak % 5 === 0) danceParty();
       note += ` · +${pts} points${extra}`;
       if (newLevel) { note += ` · 🎉 Level up: ${newLevel}!`; phrase += ' ' + withName(LEVEL_UP).replace('{level}', newLevel); }
       setFeedback('✓ ' + phrase, 'good');
@@ -1113,7 +1149,7 @@
       `<li class="${f.cleared ? 'cleared' : ''}"><span class="fact">${f.label} = ${f.ans}</span>` +
       `<span class="tries">${f.tries.map(x => x.ok ? f1(x.sec) + 's' : '✗').join(' → ')}</span>` +
       `<span class="mark">${f.cleared ? '✓ Got faster!' : 'Keep practicing'}</span></li>`).join('');
-    if (THEME.animals) $('heroDone').innerHTML = (curAnimal || pickAnimal()).sit;
+    if (THEME.animals) $('heroDone').innerHTML = heroHtml();
     show('done');
 
     if (answered) {

@@ -276,7 +276,8 @@
   const classicStar = '<svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path fill="#f5b301" stroke="#d99a00" stroke-width="1" stroke-linejoin="round" d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg>';
 
   // picture in the header: the theme's animal (Animals theme: a different one on each side)
-  const artFor = s => THEME.animals ? THEME.animals[(seed + s * 2) % THEME.animals.length].sit : (THEME.art && THEME.art.sit);
+  const artFor = s => { const a = THEME.animals && THEME.animals[(seed + s * 2) % THEME.animals.length];
+                        return a ? (a.printSit || a.sit) : (THEME.art && THEME.art.sit); };
   const star = artFor(0) ? '' : THEME.icon ? THEME.icon.replace('<svg ', '<svg class="star" ') : classicStar;
   const miniStar = THEME.iconSmall || classicStar.replace('class="star"', 'class="mini-star"');
 

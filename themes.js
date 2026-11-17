@@ -398,6 +398,88 @@
     }
   }
 
+  const animalCast = [
+    { label: 'the kitty', sit: catSit, peek: catPeek,
+      sounds: { good: ctx => meow(ctx, { pitch: 1.18, dur: 0.42, vol: 0.6 }), bad: ctx => meow(ctx, { sad: true, pitch: 0.85, dur: 0.6, vol: 0.55 }) },
+      praiseNamed: ['Purr-fect, {name}!', 'Paw-some, {name}!', 'Meow-velous, {name}!', 'You\'re the cat\'s meow, {name}!', 'Claw-some, {name}!'],
+      praise: ['Purr-fect!', 'Meow-velous!', 'Paw-some!'] },
+    { label: 'the hen', sit: henSit, peek: henPeek,
+      sounds: { good: ctx => clucks(ctx, [[0, 430, 330, 0.07, 0.95], [0.11, 450, 340, 0.07, 0.95], [0.24, 520, 780, 0.22, 1.0]]), bad: ctx => clucks(ctx, [[0, 360, 300, 0.13, 0.8], [0.22, 310, 220, 0.3, 0.8]]) },
+      praiseNamed: ['Egg-cellent, {name}!', 'You cracked it, {name}!', 'Cluck-tastic, {name}!', 'You rule the roost, {name}!', 'Wing-credible, {name}!'],
+      praise: ['Egg-cellent!', 'Cluck-tastic!', 'Cock-a-doodle-doo!'] },
+    { label: 'the puppy', sit: dog.sit, peek: dog.peek,
+      sounds: { good: ctx => voice(ctx, [[0, 330, 210, 0.11, 0.9], [0.17, 350, 220, 0.13, 0.9]], { type: 'sawtooth', bp: [850, 520], q: 2 }),
+                bad: ctx => voice(ctx, [[0, 720, 430, 0.55, 0.35]], { type: 'sine', attack: 0.06 }) },
+      praiseNamed: ['Paw-some, {name}!', 'Fetch-tastic, {name}!', 'Doggone good, {name}!', 'Woof! Great job, {name}!', 'You\'re top dog, {name}!'],
+      praise: ['Woof woof!', 'Fetch-tastic!', 'Top dog!'] },
+    { label: 'the bunny', sit: bunny.sit, peek: bunny.peek,
+      sounds: { good: ctx => voice(ctx, [[0, 420, 1100, 0.22, 0.35], [0.2, 700, 1300, 0.16, 0.25]], { type: 'sine', attack: 0.01 }),
+                bad: ctx => voice(ctx, [[0, 700, 260, 0.4, 0.3]], { type: 'triangle' }) },
+      praiseNamed: ['Hop-tastic, {name}!', 'Some-bunny is smart! Great job, {name}!', 'Hoppin\' great, {name}!', 'Ear-resistible, {name}!', 'Hip hop hooray, {name}!'],
+      praise: ['Hop-tastic!', 'Hoppin\' great!', 'Hip hop hooray!'] },
+    { label: 'the frog', sit: frog.sit, peek: frog.peek,
+      sounds: { good: ctx => voice(ctx, [[0, 190, 170, 0.1, 0.9], [0.14, 210, 160, 0.16, 0.9]], { type: 'square', bp: [1000, 800], q: 5, lfo: [45, 0.5] }),
+                bad: ctx => voice(ctx, [[0, 150, 110, 0.35, 0.9]], { type: 'square', bp: [700, 500], q: 4, lfo: [30, 0.5] }) },
+      praiseNamed: ['Toad-ally right, {name}!', 'Ribbit-ing, {name}!', 'Un-frog-gettable, {name}!', 'Hoppy dance time, {name}!', 'Toad-ally awesome, {name}!'],
+      praise: ['Ribbit!', 'Toad-ally right!', 'Hoppy dance!'] },
+    { label: 'the owl', sit: owl.sit, peek: owl.peek,
+      sounds: { good: ctx => voice(ctx, [[0, 430, 390, 0.2, 0.4], [0.3, 420, 370, 0.32, 0.4]], { type: 'sine', attack: 0.05 }),
+                bad: ctx => voice(ctx, [[0, 340, 280, 0.45, 0.4]], { type: 'sine', attack: 0.06 }) },
+      praiseNamed: ['Owl-standing, {name}!', 'Hoot hoot hooray, {name}!', 'Whooo\'s smart? You are, {name}!', 'Owl-some, {name}!', 'Wise choice, {name}!'],
+      praise: ['Owl-standing!', 'Hoot hoot!', 'Whooo knew? You did!'] },
+  ];
+
+  // ---------------- Dance party extras ----------------
+  const notePath = (fill) => `<ellipse cx="8" cy="18" rx="5" ry="3.8" transform="rotate(-20 8 18)" fill="${fill}"/>
+    <rect x="11.6" y="3" width="2.4" height="15" rx="1" fill="${fill}"/><path d="M14 3 C 18 4, 20 7, 19 11 C 18 8, 16 7, 14 7 Z" fill="${fill}"/>`;
+  const note = (fill = '#e0457b', cls = '') => `<svg ${cls ? `class="${cls}" ` : ''}viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${notePath(fill)}</svg>`;
+  // an animal with music notes around it (for the printable header)
+  const withNotes = sit => `<svg viewBox="0 0 240 232" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">` +
+    sit.replace('<svg viewBox="0 0 200 232"', '<svg x="20" y="0" width="200" height="232" viewBox="0 0 200 232"') +
+    `<g transform="translate(0 20) scale(1.6)">${notePath('#e0457b')}</g><g transform="translate(196 6) scale(1.5)">${notePath('#7c5cd6')}</g>
+     <g transform="translate(202 120) scale(1.3)">${notePath('#1f9d55')}</g></svg>`;
+  const danceJingles = [
+    [[0, 523, 523, 0.1, 0.22], [0.12, 659, 659, 0.1, 0.22], [0.24, 784, 784, 0.1, 0.22], [0.36, 1047, 1047, 0.24, 0.24]],
+    [[0, 784, 784, 0.09, 0.22], [0.1, 659, 659, 0.09, 0.22], [0.2, 784, 784, 0.09, 0.22], [0.3, 988, 988, 0.09, 0.22], [0.4, 1047, 1047, 0.22, 0.24]],
+    [[0, 587, 587, 0.1, 0.22], [0.12, 740, 740, 0.1, 0.22], [0.24, 880, 880, 0.1, 0.22], [0.36, 1175, 1175, 0.24, 0.24]],
+  ];
+  const kicks = (ctx, n) => voice(ctx, Array.from({ length: n }, (_, i) => [i * 0.24, 120, 50, 0.14, 0.42]), { type: 'sine', attack: 0.004 });
+  const danceJingle = ctx => {
+    voice(ctx, danceJingles[Math.floor(Math.random() * danceJingles.length)], { type: 'square', bp: [2200, 2200], q: 0.7 });
+    kicks(ctx, 2);
+  };
+  const partyBeat = ctx => {
+    kicks(ctx, 8);
+    voice(ctx, [[0, 523, 523, 0.12, 0.22], [0.24, 659, 659, 0.12, 0.22], [0.48, 784, 784, 0.12, 0.22], [0.72, 659, 659, 0.12, 0.22],
+                [0.96, 784, 784, 0.12, 0.22], [1.2, 880, 880, 0.12, 0.22], [1.44, 1047, 1047, 0.36, 0.24]], { type: 'square', bp: [2200, 2200], q: 0.7 });
+  };
+  const danceCast = animalCast.map(a => ({ label: a.label, sit: a.sit, peek: a.peek, printSit: withNotes(a.sit),
+                                           sounds: { good: danceJingle, bad: a.sounds.bad } }));
+  const danceExtraCss = `
+  html.theme-dance .peek svg { transform-origin: 50% 92%; animation: dance-sway 1.6s ease-in-out infinite; }
+  html.theme-dance .peek.swap svg { animation: pet-in .4s ease-out, dance-sway 1.6s ease-in-out .4s infinite; }
+  html.theme-dance .card.good .peek svg { animation: dance-move 1.3s ease-in-out; }
+  html.theme-dance .card.bad .peek svg { animation: pet-tilt .5s ease-in-out; }
+  @keyframes dance-sway { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg) translateY(-3px); } }
+  @keyframes dance-move {
+    0% { transform: none; } 14% { transform: translateY(-16px) rotate(-12deg); } 28% { transform: none; }
+    42% { transform: translateY(-16px) rotate(12deg); } 56% { transform: none; } 72% { transform: translateY(-12px) scale(1.1); } 100% { transform: none; } }
+  html.theme-dance .card.good .peek::before, html.theme-dance .card.good .peek::after {
+    content: '♪'; position: absolute; top: 0; font-size: 26px; font-weight: 800; color: #e0457b; animation: note-up 1.3s ease-out forwards; }
+  html.theme-dance .card.good .peek::before { left: -6px; }
+  html.theme-dance .card.good .peek::after { content: '♫'; right: -8px; color: #7c5cd6; animation-delay: .2s; opacity: 0; }
+  @keyframes note-up { 0% { opacity: 0; transform: translateY(10px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-40px) rotate(15deg); } }
+  html.theme-dance .hero { width: 330px; display: flex; gap: 6px; align-items: flex-end; }
+  html.theme-dance .hero.small { width: 270px; }
+  html.theme-dance .hero .dancer { flex: 1; transform-origin: 50% 100%; animation: dance-loop .7s ease-in-out infinite alternate; }
+  html.theme-dance .hero .dancer:nth-child(2) { animation-delay: .35s; }
+  html.theme-dance .hero .dancer:nth-child(3) { animation-direction: alternate-reverse; }
+  @keyframes dance-loop { from { transform: translateY(0) rotate(-7deg); } to { transform: translateY(-14px) rotate(7deg); } }
+  @media (max-width: 600px) { html.theme-dance .hero { width: 270px; } html.theme-dance .hero.small { width: 220px; } }
+  html.theme-dance .hdr-cat { width: 0.86in; }
+  html.theme-dance .hdr-cat.small { width: 0.5in; }
+  `;
+
   const themes = {
     classic: { id: 'classic', label: 'Classic' },
     cats: {
@@ -529,36 +611,7 @@
       icon: paw('#7c5cd6'), iconSmall: paw('#7c5cd6', 'mini-star'),
       art: { sit: catSit, peek: catPeek },
       // A different animal peeks over each new problem, with its own sound and cheers
-      animals: [
-        { label: 'the kitty', sit: catSit, peek: catPeek,
-          sounds: { good: ctx => meow(ctx, { pitch: 1.18, dur: 0.42, vol: 0.6 }), bad: ctx => meow(ctx, { sad: true, pitch: 0.85, dur: 0.6, vol: 0.55 }) },
-          praiseNamed: ['Purr-fect, {name}!', 'Paw-some, {name}!', 'Meow-velous, {name}!', 'You\'re the cat\'s meow, {name}!', 'Claw-some, {name}!'],
-          praise: ['Purr-fect!', 'Meow-velous!', 'Paw-some!'] },
-        { label: 'the hen', sit: henSit, peek: henPeek,
-          sounds: { good: ctx => clucks(ctx, [[0, 430, 330, 0.07, 0.95], [0.11, 450, 340, 0.07, 0.95], [0.24, 520, 780, 0.22, 1.0]]), bad: ctx => clucks(ctx, [[0, 360, 300, 0.13, 0.8], [0.22, 310, 220, 0.3, 0.8]]) },
-          praiseNamed: ['Egg-cellent, {name}!', 'You cracked it, {name}!', 'Cluck-tastic, {name}!', 'You rule the roost, {name}!', 'Wing-credible, {name}!'],
-          praise: ['Egg-cellent!', 'Cluck-tastic!', 'Cock-a-doodle-doo!'] },
-        { label: 'the puppy', sit: dog.sit, peek: dog.peek,
-          sounds: { good: ctx => voice(ctx, [[0, 330, 210, 0.11, 0.9], [0.17, 350, 220, 0.13, 0.9]], { type: 'sawtooth', bp: [850, 520], q: 2 }),
-                    bad: ctx => voice(ctx, [[0, 720, 430, 0.55, 0.35]], { type: 'sine', attack: 0.06 }) },
-          praiseNamed: ['Paw-some, {name}!', 'Fetch-tastic, {name}!', 'Doggone good, {name}!', 'Woof! Great job, {name}!', 'You\'re top dog, {name}!'],
-          praise: ['Woof woof!', 'Fetch-tastic!', 'Top dog!'] },
-        { label: 'the bunny', sit: bunny.sit, peek: bunny.peek,
-          sounds: { good: ctx => voice(ctx, [[0, 420, 1100, 0.22, 0.35], [0.2, 700, 1300, 0.16, 0.25]], { type: 'sine', attack: 0.01 }),
-                    bad: ctx => voice(ctx, [[0, 700, 260, 0.4, 0.3]], { type: 'triangle' }) },
-          praiseNamed: ['Hop-tastic, {name}!', 'Some-bunny is smart! Great job, {name}!', 'Hoppin\' great, {name}!', 'Ear-resistible, {name}!', 'Hip hop hooray, {name}!'],
-          praise: ['Hop-tastic!', 'Hoppin\' great!', 'Hip hop hooray!'] },
-        { label: 'the frog', sit: frog.sit, peek: frog.peek,
-          sounds: { good: ctx => voice(ctx, [[0, 190, 170, 0.1, 0.9], [0.14, 210, 160, 0.16, 0.9]], { type: 'square', bp: [1000, 800], q: 5, lfo: [45, 0.5] }),
-                    bad: ctx => voice(ctx, [[0, 150, 110, 0.35, 0.9]], { type: 'square', bp: [700, 500], q: 4, lfo: [30, 0.5] }) },
-          praiseNamed: ['Toad-ally right, {name}!', 'Ribbit-ing, {name}!', 'Un-frog-gettable, {name}!', 'Hoppy dance time, {name}!', 'Toad-ally awesome, {name}!'],
-          praise: ['Ribbit!', 'Toad-ally right!', 'Hoppy dance!'] },
-        { label: 'the owl', sit: owl.sit, peek: owl.peek,
-          sounds: { good: ctx => voice(ctx, [[0, 430, 390, 0.2, 0.4], [0.3, 420, 370, 0.32, 0.4]], { type: 'sine', attack: 0.05 }),
-                    bad: ctx => voice(ctx, [[0, 340, 280, 0.45, 0.4]], { type: 'sine', attack: 0.06 }) },
-          praiseNamed: ['Owl-standing, {name}!', 'Hoot hoot hooray, {name}!', 'Whooo\'s smart? You are, {name}!', 'Owl-some, {name}!', 'Wise choice, {name}!'],
-          praise: ['Owl-standing!', 'Hoot hoot!', 'Whooo knew? You did!'] },
-      ],
+      animals: animalCast,
       sounds: { goodDelay: 560, badDelay: 750 },
       audio: {
         intro: 'Hi {name}! The animals came to do math with you! Here\'s your first one. {fact}?',
@@ -614,6 +667,77 @@
         dotA: dataUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${pawPath('#7c5cd6')}</svg>`), dotB: pawOrange,
         soft: '#cbbdf2', featureTint: '#f1ecff',
       }),
+    },
+    dance: {
+      id: 'dance', label: 'Dance Party',
+      icon: note('#e0457b'), iconSmall: note('#e0457b', 'mini-star'),
+      art: { sit: catSit, peek: catPeek },
+      animals: danceCast,
+      heroGroup: 3,                                      // three animals dance on the start and end screens
+      party: { title: 'Dance party! 🎉', sound: partyBeat }, // every 5 in a row and every level-up
+      sounds: { goodDelay: 640, badDelay: 750 },
+      audio: {
+        intro: 'Hi {name}! It\'s a math dance party! Here\'s your first one. {fact}?',
+        praiseNamed: [
+          'Dance-tastic, {name}!', 'You\'ve got the moves, {name}!', 'Groovy, {name}!', 'Let\'s boogie, {name}!',
+          'Shake it, {name}! That\'s right!', 'Twirl-iffic, {name}!', 'That answer has rhythm, {name}!', 'Disco math star, {name}!',
+          'Bust a move, {name}! You got it!', 'Wiggle wiggle, woo-hoo, {name}!', 'Toe-tapping good, {name}!', 'You rock, {name}!',
+        ],
+        praise: ['Dance-tastic!', 'Groovy!', 'Let\'s boogie!', 'You\'ve got the moves!', 'Woo-hoo!', 'Twirl-iffic!', 'You rock!'],
+        ask: ['{name}, what\'s {fact}?', '{animal} is dancing! {name}, {fact}?', 'Ready to groove, {name}? {fact}?', 'Here\'s one from {animal}, {name}. {fact}?'],
+        faster: ['Zoom! Faster moves, {name}!', 'Speedy feet, {name}! You got faster!', 'Way faster, {name}! Let\'s dance!'],
+        streak: ['Dance party! {n} in a row, {name}!', '{n} in a row! Everybody dance for {name}!', 'Party time! {n} in a row, {name}!'],
+        oops: [
+          'Nice try, {name}! {fact} is {ans}. Keep dancing!',
+          'Almost, {name}! {fact} is {ans}.',
+          'Oops! {fact} is {ans}. Shake it off, {name}!',
+          'Good try, {name}! {fact} is {ans}.',
+        ],
+        levels: ['Toe Tapper', 'Head Bopper', 'Hip Shaker', 'Groove Maker', 'Spin Master', 'Dance Captain', 'Disco Star', 'Party Leader', 'Dance Superstar', 'Legend of the Dance Floor'],
+        levelUp: 'Dance party! Level up, {name}! You\'re now a {level}!',
+        levelBadge: '🎶',
+        doneGreat: 'What a dance party, {name}!', doneGood: 'Great dancing and math, {name}!', doneNone: 'See you on the dance floor, {name}!',
+        doneSpokenGreat: 'You\'ve got the moves, {name}!', doneSpokenGood: 'Great job, {name}! Keep on dancing!',
+      },
+      print: {
+        cheers: [
+          "dance your way through these problems!",
+          "you've got the moves — and the math!",
+          "put on your dancing shoes — let's go!",
+          "shake it, solve it, rock it!",
+          "every right answer is a happy dance!",
+          "you're a math superstar on the dance floor!",
+          "groove through every problem!",
+          "step, spin, solve — you've got this!",
+          "the animals are dancing for you!",
+          "boogie down with your brainpower!",
+          "you make math look groovy!",
+          "one, two, three — solve with me!",
+          "twirl through this page like a pro!",
+          "hip hip hooray, it's math dance day!",
+          "wiggle your brain and get it right!",
+          "you're the star of the math dance party!",
+          "keep the rhythm — one problem at a time!",
+          "dance like nobody's watching, solve like a champ!",
+          "turn up the music and the math!",
+          "your brain has got rhythm!",
+        ],
+        side2: 'keep dancing!',
+        turn: 'Turn over — the party keeps going &rarr;',
+        finish: 'Take a bow, dance star!',
+        footPaws: note('#e0457b') + note('#7c5cd6'),
+      },
+      css: petCss('dance', {
+        ink: '#2d1f33', muted: '#7a6585', bg: '#fdf3fb', line: '#f1d9ec', band: '#fbe9f6', box: '#b48aa8',
+        accent: '#e0457b', accentDark: '#b02e5c',
+        pattern: dataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140" viewBox="0 0 140 140"><g opacity=".1">
+          <g transform="translate(14 16) rotate(-12 12 12)">${notePath('#e0457b')}</g><g transform="translate(84 74) rotate(10 12 12)">${notePath('#7c5cd6')}</g>
+          <circle cx="104" cy="22" r="3" fill="#ee8a0f"/><circle cx="40" cy="100" r="3" fill="#1f9d55"/><circle cx="70" cy="48" r="2.4" fill="#3b7be0"/>
+          <rect x="22" y="70" width="5" height="8" rx="1" transform="rotate(25 24 74)" fill="#f5b301"/><rect x="118" y="116" width="5" height="8" rx="1" transform="rotate(-20 120 120)" fill="#e0457b"/></g></svg>`),
+        dotA: dataUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${notePath('#e0457b')}</svg>`),
+        dotB: dataUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${notePath('#7c5cd6')}</svg>`),
+        soft: '#f0c2da', featureTint: '#fdeaf4',
+      }) + danceExtraCss,
     },
   };
 
