@@ -84,7 +84,7 @@
   const WORKSHEETS = [
     { section: 'Practice out loud', items: [
       { file: 'audio-practice.html', title: 'Audio Practice: Multiply & Divide', feature: true,
-        desc: 'One problem at a time. Hear it, say or type the answer. Earn points, level up, and get hints when stuck.',
+        desc: 'One problem at a time. Hear it, say or type the answer. Earn points, level up, and get hints when stuck. Pick the numbers on its start screen.',
         icon: '🎧', color: '#8b5cf6', label: 'Tables:', tables: [2, 3, 4, 5, 10] },
     ]},
     { section: 'Printable worksheets', note: 'Legal size · two-sided · 240 problems', items: [
@@ -103,6 +103,16 @@
     ]},
   ];
   // ===========================================================================
+
+  // The audio practice card shows the numbers picked on its start screen (saved on this device)
+  try {
+    const picked = JSON.parse(localStorage.getItem('audioPracticeTables') || 'null');
+    const op = localStorage.getItem('audioPracticeOps');
+    const card = WORKSHEETS[0].items.find(w => w.file === 'audio-practice.html');
+    if (Array.isArray(picked) && picked.length) card.tables = picked;
+    if (op === 'mul') card.title = 'Audio Practice: Multiplication';
+    if (op === 'div') { card.title = 'Audio Practice: Division'; card.label = 'Divide by:'; }
+  } catch (e) {}
 
   // Name for the worksheets: kept in this browser only (never in the files)
   const nameInput = document.getElementById('kidName');
@@ -135,6 +145,8 @@
     document.getElementById('themebox').hidden = true;
   }
 
+  const NUM_COLORS = { 1: '#64748b', 2: '#3b7be0', 3: '#1f9d55', 4: '#ee8a0f', 5: '#8b5cf6', 6: '#0e9aa7',
+                       7: '#c2410c', 8: '#4f46e5', 9: '#ca8a04', 10: '#e0457b', 11: '#65a30d', 12: '#0369a1' };
   const chipColors = ['#3b7be0', '#1f9d55', '#ee8a0f', '#8b5cf6', '#e0457b', '#0e9aa7'];
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   document.getElementById('list').innerHTML = WORKSHEETS.map(sec => `
@@ -148,7 +160,7 @@
               <div class="title">${esc(w.title)}</div>
               <div class="desc">${esc(w.desc)}</div>
               <div class="chips">${esc(w.label)}${w.tables.map((t, i) =>
-                `<span class="chip" style="background:${chipColors[i % chipColors.length]}">${t}</span>`).join('')}</div>
+                `<span class="chip" style="background:${(w.file === 'audio-practice.html' && NUM_COLORS[t]) || chipColors[i % chipColors.length]}">${t}</span>`).join('')}</div>
             </div>
           </a>`).join('')}
       </div>
