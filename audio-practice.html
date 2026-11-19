@@ -32,6 +32,11 @@
   .brand { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; }
   .brand svg { width: 26px; height: 26px; flex: none; }
   .top a { color: var(--muted); font-weight: 600; font-size: 15px; text-decoration: none; white-space: nowrap; }
+  .top .right { display: flex; align-items: center; gap: 14px; }
+  .mute { font: inherit; font-size: 15px; font-weight: 700; color: var(--ink); background: #fff; border: 1.5px solid #c4cad4;
+          border-radius: 20px; padding: 5px 12px; white-space: nowrap; }
+  .mute:hover { background: #f4f6f9; }
+  .mute[aria-pressed="true"] { background: #fdecec; border-color: #e7a3a3; color: #b02e2e; }
   .top a:hover { color: var(--ink); }
   .chips { display: flex; gap: 6px; align-items: center; color: var(--muted); font-weight: 600; font-size: 14px; }
   .chip {
@@ -254,7 +259,10 @@
     <span id="pageTitle">Audio Practice</span>
   </div>
   <div class="chips" id="chips"></div>
-  <a href="index.html">&larr; <span class="long">All worksheets</span><span class="short">Back</span></a>
+  <div class="right">
+    <button class="mute" id="btnMute" type="button" aria-pressed="false" title="Turn all sound on or off"></button>
+    <a href="index.html">&larr; <span class="long">All worksheets</span><span class="short">Back</span></a>
+  </div>
 </div>
 
 <div class="party" id="party" aria-hidden="true"></div>
@@ -461,7 +469,7 @@
       `<i style="left:${(Math.random() * 100).toFixed(1)}%;background:${colors[i % colors.length]};animation-delay:${(Math.random() * 0.7).toFixed(2)}s"></i>`).join('');
     el.innerHTML = `<div class="ptitle">${THEME.party.title || 'Party!'}</div><div class="stage">${THEME.animals.map(a => `<div>${a.sit}</div>`).join('')}</div>${confetti}`;
     el.classList.add('on');
-    if (THEME.party.sound) setTimeout(() => THEME.party.sound(actx), 250);
+    if (THEME.party.sound) setTimeout(() => { if (!muted) THEME.party.sound(actx); }, 250);
     clearTimeout(partyTimer);
     partyTimer = setTimeout(() => { el.classList.remove('on'); el.innerHTML = ''; }, 2600);
   }
@@ -612,11 +620,28 @@
     o.connect(g); g.connect(actx.destination);
     o.start(t0); o.stop(t0 + dur + 0.05);
   }
-  const soundGood = () => curAnimal && curAnimal.sounds ? curAnimal.sounds.good(actx) : THEME.sounds && THEME.sounds.good ? THEME.sounds.good(actx) : chime();
+  const soundGood = () => muted ? null : curAnimal && curAnimal.sounds ? curAnimal.sounds.good(actx) : THEME.sounds && THEME.sounds.good ? THEME.sounds.good(actx) : chime();
   const chime = () => { tone(784, 0, 0.22, 'sine', 0.16); tone(988, 0.08, 0.22, 'sine', 0.16); tone(1319, 0.16, 0.32, 'sine', 0.16); };
-  const soundBad  = () => curAnimal && curAnimal.sounds ? curAnimal.sounds.bad(actx) : THEME.sounds && THEME.sounds.bad ? THEME.sounds.bad(actx) : buzz();
+  const soundBad  = () => muted ? null : curAnimal && curAnimal.sounds ? curAnimal.sounds.bad(actx) : THEME.sounds && THEME.sounds.bad ? THEME.sounds.bad(actx) : buzz();
   const buzz = () => { tone(330, 0, 0.16, 'triangle', 0.22); tone(247, 0.17, 0.28, 'triangle', 0.22); };
-  const soundReady = () => tone(1175, 0, 0.12, 'sine', 0.09);   // "your turn" blip when the mic opens
+  const soundReady = () => muted ? null : tone(1175, 0, 0.12, 'sine', 0.09);   // "your turn" blip when the mic opens
+
+  // ---------- Sound on/off (everything: reading, praise, sound effects, music) ----------
+  let muted = false;
+  try { muted = localStorage.getItem('audioPracticeMuted') === '1'; } catch (e) {}
+  function renderMute() {
+    const b = $('btnMute');
+    b.setAttribute('aria-pressed', String(muted));
+    b.innerHTML = muted ? '🔇<span class="long"> Sound off</span>' : '🔊<span class="long"> Sound on</span>';
+    b.setAttribute('aria-label', muted ? 'Sound is off. Turn sound on' : 'Sound is on. Turn sound off');
+  }
+  function setMuted(on) {
+    muted = on;
+    try { localStorage.setItem('audioPracticeMuted', on ? '1' : '0'); } catch (e) {}
+    if (on && canSpeak) speechSynthesis.cancel();      // stop talking right away
+    if (on && actx) { try { actx.suspend(); } catch (e) {} } else if (!on && actx) { try { actx.resume(); } catch (e) {} }
+    renderMute();
+  }
 
   // ---------- Talking (text to speech) ----------
   const canSpeak = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
@@ -639,7 +664,7 @@
       finished = true; clearTimeout(fallback);
       if (tok === session && then) then();
     };
-    if (!talkOn || !canSpeak) { fallback = setTimeout(finish, quietMs || 0); return; }
+    if (!talkOn || muted || !canSpeak) { fallback = setTimeout(finish, quietMs || 0); return; }
     const u = new SpeechSynthesisUtterance(text);
     keepUtterance = u;                               // keeps Chrome from dropping the "end" event
     if (voice) { u.voice = voice; u.lang = voice.lang; } else { u.lang = 'en-US'; }
@@ -927,7 +952,7 @@
     const h = hintFor(cur, hintLevel);
     $('hintBox').innerHTML = h.html; $('hintBox').hidden = false;
     pauseListening();
-    if (talkOn) setStatus('speaking');
+    if (talkOn && !muted) setStatus('speaking');
     speak(h.say, () => {
       if (state !== 'asking') return;
       if (voiceOn) listen();
@@ -1028,9 +1053,9 @@
     state = 'asking';
     pauseListening();
     askedAt = performance.now();
-    readyAt = talkOn ? null : askedAt;               // the answer clock starts once the problem has been read
-    if (!talkOn) setTimeout(armHintGlow, 0);
-    setStatus(talkOn ? 'speaking' : (voiceOn ? 'listening' : 'type'));
+    readyAt = talkOn && !muted ? null : askedAt;     // the answer clock starts once the problem has been read
+    if (!talkOn || muted) setTimeout(armHintGlow, 0);
+    setStatus(talkOn && !muted ? 'speaking' : (voiceOn ? 'listening' : 'type'));
     let ask = cur.words;
     if (firstAsk) ask = TA.intro ? withName(TA.intro).replace('{fact}', cur.words)
                              : `Hi ${KID_NAME}! Let's do some math. Here's your first one. ${cur.words}?`;
@@ -1049,7 +1074,7 @@
   function hearAgain() {
     if (state === 'asking') {
       pauseListening();
-      if (talkOn) setStatus('speaking');
+      if (talkOn && !muted) setStatus('speaking');
       speak(cur.words, () => {
         if (state !== 'asking') return;
         if (readyAt === null) readyAt = performance.now();
@@ -1058,7 +1083,7 @@
       }, 0);
     } else if (state === 'lesson') {
       pauseListening();
-      if (talkOn) setStatus('speaking');
+      if (talkOn && !muted) setStatus('speaking');
       speak(lessonSpeech, () => { if (state === 'lesson') { if (voiceOn) listen(); setStatus('lesson'); } }, 0);
     }
   }
@@ -1157,7 +1182,7 @@
       setTimeout(() => {
         if (tok !== session || state !== 'lesson') return;
         speak(lessonSpeech, () => { if (state === 'lesson') { if (voiceOn) listen(); setStatus('lesson'); } }, 0);
-        if (!talkOn) setStatus('lesson');
+        if (!talkOn || muted) setStatus('lesson');
       }, (THEME.sounds && THEME.sounds.badDelay) || 550);
     }
   }
@@ -1218,6 +1243,8 @@
   $('btnRepeat').onclick = hearAgain;
   $('btnHint').onclick = showHint;
   $('btnGotIt').onclick = gotIt;
+  $('btnMute').onclick = () => setMuted(!muted);
+  renderMute();
   $('btnMic').onclick = () => {
     if (state !== 'asking' && state !== 'lesson') return;
     ensureAudio();
