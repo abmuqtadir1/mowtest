@@ -37,6 +37,9 @@
           border-radius: 20px; padding: 5px 12px; white-space: nowrap; }
   .mute:hover { background: #f4f6f9; }
   .mute[aria-pressed="true"] { background: #fdecec; border-color: #e7a3a3; color: #b02e2e; }
+  .mute .ico { position: relative; display: inline-block; }
+  .micsw[aria-pressed="true"] .ico::after { content: ''; position: absolute; left: -3px; right: -3px; top: 50%; height: 2.5px;
+                                             background: #b02e2e; border-radius: 2px; transform: rotate(-45deg); }
   .top a:hover { color: var(--ink); }
   .chips { display: flex; gap: 6px; align-items: center; color: var(--muted); font-weight: 600; font-size: 14px; }
   .chip {
@@ -260,6 +263,7 @@
   </div>
   <div class="chips" id="chips"></div>
   <div class="right">
+    <button class="mute micsw" id="btnMicSwitch" type="button" aria-pressed="false" title="Turn the microphone on or off"></button>
     <button class="mute" id="btnMute" type="button" aria-pressed="false" title="Turn all sound on or off"></button>
     <a href="index.html">&larr; <span class="long">All worksheets</span><span class="short">Back</span></a>
   </div>
@@ -763,6 +767,7 @@
   function voiceTrouble(msg) {
     voiceOn = false; recWanted = false;
     setMic(false);
+    renderMicSwitch();
     $('voiceNote').textContent = '🎤 ' + msg;
     if (state === 'asking') setStatus('type');
     if (state === 'lesson') setStatus('lesson');
@@ -1033,6 +1038,7 @@
     hideLesson();
     show('play');
     setMic(false);
+    renderMicSwitch();
     nextProblem();
   }
 
@@ -1289,6 +1295,39 @@
   }
   showTrickyNote();
   renderProgress($('progressStart'));
+
+  // ---------- Mic on/off (the same setting as "Answer with my voice") ----------
+  function savePrefs() {
+    try { localStorage.setItem('audioPracticePrefs', JSON.stringify({ talk: $('optTalk').checked, voice: $('optVoice').checked })); } catch (e) {}
+  }
+  const micIsOn = () => $('optVoice').checked && (state === 'idle' || state === 'done' || voiceOn);
+  function renderMicSwitch() {
+    const b = $('btnMicSwitch'), on = micIsOn();
+    b.hidden = !canListen;
+    b.setAttribute('aria-pressed', String(!on));
+    b.innerHTML = '<span class="ico">🎤</span><span class="long">' + (on ? ' Mic on' : ' Mic off') + '</span>';
+    b.setAttribute('aria-label', on ? 'Microphone is on. Turn it off' : 'Microphone is off. Turn it on');
+  }
+  function setMicAllowed(on) {
+    $('optVoice').checked = on;
+    savePrefs();
+    if (state !== 'idle' && state !== 'done') {
+      voiceOn = on && canListen;
+      $('voiceNote').textContent = '';
+      if (!voiceOn) {
+        pauseListening();                                  // stops listening right away and hides "Tap to talk"
+        if (state === 'asking') setStatus('type');
+        if (state === 'lesson') setStatus('lesson');
+      } else if (state === 'asking' || state === 'lesson') {
+        if (singleShot) { setMic(false); if (state === 'asking') setStatus('tap'); }   // phones: tap 🎤 to talk
+        else if (!(canSpeak && speechSynthesis.speaking)) listen();                     // computers: start listening
+      }
+    }
+    renderMicSwitch();
+  }
+  $('btnMicSwitch').onclick = () => { ensureAudio(); setMicAllowed(!micIsOn()); };
+  $('optVoice').addEventListener('change', () => { savePrefs(); renderMicSwitch(); });
+  renderMicSwitch();
 
   // ---------- Pick the numbers and the kind of problems ----------
   function renderPicker(note) {
